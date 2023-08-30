@@ -56,11 +56,6 @@ func genRoute(controller any) []*Route {
 			route.Handles = append(append([]gin.HandlerFunc{}, middlewares...), route.Handles...)
 			routes = append(routes, route)
 		}
-
-		// Controller中的Middlewares方法返回的是gin.HandlerFunc类型的切片, 中间件
-		if t.Method(i).Name == "Middlewares" {
-
-		}
 	}
 
 	return routes
