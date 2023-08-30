@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 
+	ginplush "github.com/aide-cloud/gin-plus"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,6 +30,6 @@ func (p *People) Middlewares() []gin.HandlerFunc {
 
 func main() {
 	r := gin.Default()
-	ginInstance := New(r, WithControllers(&People{}))
+	ginInstance := ginplush.New(r, ginplush.WithControllers(&People{}))
 	ginInstance.Run(":8080")
 }
