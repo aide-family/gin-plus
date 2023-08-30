@@ -31,6 +31,7 @@ func genRoute(controller any) []*Route {
 		tmp = t.Elem()
 	}
 
+	// TODO 应该判断是否为Controller类型
 	if tmp.Kind() != reflect.Struct {
 		panic(fmt.Errorf("controller is %s, not struct or pointer to struct", tmp.Kind().String()))
 	}
