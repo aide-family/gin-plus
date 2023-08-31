@@ -1,7 +1,9 @@
 package ginplus
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
+	"reflect"
 	"testing"
 )
 
@@ -48,4 +50,36 @@ func Test_isController(t *testing.T) {
 			}
 		})
 	}
+}
+
+type (
+	Call struct {
+	}
+	Req struct {
+		Name string `json:"name"`
+	}
+	Resp struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data any    `json:"data"`
+	}
+)
+
+func (c *Call) CallBack(ctx context.Context, req Req) (Resp, error) {
+	return Resp{}, nil
+}
+
+func Test_isCallBack(t *testing.T) {
+	ty := reflect.TypeOf(&Call{})
+	m, ok := ty.MethodByName("CallBack")
+	if !ok {
+		t.Error("not found method")
+	}
+
+	req, resp, ok := isCallBack(m.Type)
+	if ok {
+		t.Error("not found method CallBack: ", m.Type.String())
+	}
+
+	t.Log(req, resp)
 }

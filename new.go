@@ -1,6 +1,7 @@
 package ginplus
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"path"
 )
@@ -40,6 +41,8 @@ type (
 	Option func(*GinEngine)
 
 	httpMethod string
+
+	CallBack[Req, Resp any] func(ctx context.Context, req Req) (Resp, error)
 )
 
 const (

@@ -1,6 +1,8 @@
 package ginplus
 
 import (
+	"context"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"testing"
@@ -43,6 +45,14 @@ func (p *People) List() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ctx.String(200, "List")
 	}
+}
+
+func (p *People) PostCreateInfo(ctx context.Context, req struct{ Name string }) (string, error) {
+	return "PostCreateInfo", errors.New("custom error")
+}
+
+func (p *People) PutUpdateInfo(ctx context.Context, req struct{ Name string }) (struct{ Name string }, error) {
+	return struct{ Name string }{Name: req.Name}, nil
 }
 
 func (p *People) Middlewares() []gin.HandlerFunc {
@@ -91,7 +101,7 @@ func TestNew(t *testing.T) {
 			log.Println("main middleware")
 		}),
 		WithBasePath("aide-cloud"),
-		WithHttpMethodPrefixes(Get, Post),
+		WithHttpMethodPrefixes(Get, Post, Put),
 		WithControllers(&People{
 			Img: &Img{
 				File: &File{},

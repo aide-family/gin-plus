@@ -22,6 +22,32 @@ func isHandlerFunc(t reflect.Type) bool {
 	return t.Out(0).String() == GinHandleFunc
 }
 
+// isCallBack 判断是否为CallBack类型
+func isCallBack(t reflect.Type) (any, any, bool) {
+	// 通过反射获取方法的返回值类型
+	if t.Kind() != reflect.Func {
+		return nil, nil, false
+	}
+
+	if t.NumIn() != 3 || t.NumOut() != 2 {
+		return nil, nil, false
+	}
+
+	if t.Out(1).String() != "error" {
+		return nil, nil, false
+	}
+
+	if t.In(1).String() != "context.Context" {
+		return nil, nil, false
+	}
+
+	// new一个out 0的实例和in 2的实例
+	req := reflect.New(t.In(2)).Interface()
+	resp := reflect.New(t.Out(0)).Interface()
+
+	return req, resp, true
+}
+
 func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Route {
 	t := reflect.TypeOf(controller)
 	var routes []*Route
@@ -52,23 +78,32 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 
 	if !skipAnonymous {
 		for i := 0; i < t.NumMethod(); i++ {
-			// 解析方法名称, 生成路由, 例如: GetInfoAction -> get /info  PostPeopleAction -> post /people
-			// 通过反射获取方法的返回值类型
+			metheodName := t.Method(i).Name
+			privateMidd := methoderMiddlewaresMap[metheodName]
+			route := l.parseRoute(metheodName)
+			if route == nil {
+				continue
+			}
+			route.Path = path.Join(basePath, route.Path)
+			// 组下公共中间件
+			route.Handles = append(route.Handles, middlewares...)
+			// 接口私有中间件
+			route.Handles = append(route.Handles, privateMidd...)
+
 			if isHandlerFunc(t.Method(i).Type) {
-				metheodName := t.Method(i).Name
-				privateMidd := methoderMiddlewaresMap[metheodName]
-				route := l.parseRoute(metheodName)
-				if route == nil {
-					continue
-				}
-				route.Path = path.Join(basePath, route.Path)
-				// 组下公共中间件
-				route.Handles = append(route.Handles, middlewares...)
-				// 接口私有中间件
-				route.Handles = append(route.Handles, privateMidd...)
 				// 具体的action
 				route.Handles = append(route.Handles, t.Method(i).Func.Call([]reflect.Value{reflect.ValueOf(controller)})[0].Interface().(gin.HandlerFunc))
 				routes = append(routes, route)
+				continue
+			}
+
+			// 判断是否为CallBack类型
+			req, _, isCb := isCallBack(t.Method(i).Type)
+			if isCb {
+				// 具体的action
+				route.Handles = append(route.Handles, newDefaultHandler(controller, t.Method(i), req))
+				routes = append(routes, route)
+				continue
 			}
 		}
 	}
