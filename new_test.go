@@ -21,7 +21,7 @@ var _ Middlewarer = (*People)(nil)
 var _ Controller = (*People)(nil)
 var _ MethoderMiddlewarer = (*People)(nil)
 
-func (l *Img) GetInfo() gin.HandlerFunc {
+func (l *Img) GetImgInfo() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ctx.String(200, "GetInfo")
 	}
