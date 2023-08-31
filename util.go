@@ -1,10 +1,10 @@
 package ginplus
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"path"
 	"reflect"
+	"strings"
 )
 
 const (
@@ -22,7 +22,7 @@ func isHandlerFunc(t reflect.Type) bool {
 	return t.Out(0).String() == GinHandleFunc
 }
 
-func genRoute(controller any) []*Route {
+func (l *GinEngine) genRoute(p string, controller any) []*Route {
 	t := reflect.TypeOf(controller)
 	var routes []*Route
 
@@ -31,30 +31,42 @@ func genRoute(controller any) []*Route {
 		tmp = t.Elem()
 	}
 
-	// TODO 应该判断是否为Controller类型
-	if tmp.Kind() != reflect.Struct {
-		panic(fmt.Errorf("controller is %s, not struct or pointer to struct", tmp.Kind().String()))
+	var middlewares []gin.HandlerFunc
+	midd, isMidd := isMiddlewarer(controller)
+	if isMidd {
+		//Middlewares方法返回的是gin.HandlerFunc类型的切片, 中间件
+		middlewares = midd.Middlewares()
 	}
 
-	var middlewares []gin.HandlerFunc
-	// Controller中的Middlewares方法返回的是gin.HandlerFunc类型的切片, 中间件
-	for i := 0; i < t.NumMethod(); i++ {
-		if t.Method(i).Name == "Middlewares" {
-			middlewares = t.Method(i).Func.Call([]reflect.Value{reflect.ValueOf(controller)})[0].Interface().([]gin.HandlerFunc)
-		}
+	basePath := path.Join(p, l.routeNamingRuleFunc(tmp.Name()))
+	ctrl, isCtrl := isController(controller)
+	if isCtrl {
+		basePath = ctrl.BasePath()
+	}
+
+	methoderMiddlewaresMap := make(map[string][]gin.HandlerFunc)
+	methoderMidd, privateMiddOk := isMethoderMiddlewarer(controller)
+	if privateMiddOk {
+		methoderMiddlewaresMap = methoderMidd.MethoderMiddlewares()
 	}
 
 	for i := 0; i < t.NumMethod(); i++ {
 		// 解析方法名称, 生成路由, 例如: GetInfoAction -> get /info  PostPeopleAction -> post /people
 		// 通过反射获取方法的返回值类型
 		if isHandlerFunc(t.Method(i).Type) {
-			route := parseRoute(t.Method(i).Name)
+			metheodName := t.Method(i).Name
+			privateMidd := methoderMiddlewaresMap[metheodName]
+			route := l.parseRoute(metheodName)
 			if route == nil {
 				continue
 			}
-			route.Path = path.Join("/", routeToCamel(tmp.Name()), route.Path)
+			route.Path = path.Join(basePath, route.Path)
+			// 组下公共中间件
+			route.Handles = append(route.Handles, middlewares...)
+			// 接口私有中间件
+			route.Handles = append(route.Handles, privateMidd...)
+			// 具体的action
 			route.Handles = append(route.Handles, t.Method(i).Func.Call([]reflect.Value{reflect.ValueOf(controller)})[0].Interface().(gin.HandlerFunc))
-			route.Handles = append(append([]gin.HandlerFunc{}, middlewares...), route.Handles...)
 			routes = append(routes, route)
 		}
 	}
@@ -63,40 +75,26 @@ func genRoute(controller any) []*Route {
 }
 
 // parseRoute 从方法名称中解析出路由和请求方式
-func parseRoute(methodName string) *Route {
-	httpMethod := ""
-	p := ""
-	// 从方法名称中解析出路由和请求方式, 是否包含http请求方式前缀
-	if methodName[:3] == "Get" || methodName[:3] == "GET" {
-		httpMethod = "GET"
-		p = fmt.Sprintf("%s", methodName[3:])
-	} else if methodName[:4] == "Post" || methodName[:4] == "POST" {
-		httpMethod = "POST"
-		p = fmt.Sprintf("%s", methodName[4:])
-	} else if methodName[:6] == "Delete" || methodName[:6] == "DELETE" {
-		httpMethod = "DELETE"
-		p = fmt.Sprintf("%s", methodName[6:])
-	} else if methodName[:5] == "Patch" || methodName[:5] == "PATCH" {
-		httpMethod = "PATCH"
-		p = fmt.Sprintf("%s", methodName[5:])
-	} else if methodName[:4] == "Head" || methodName[:4] == "HEAD" {
-		httpMethod = "HEAD"
-		p = fmt.Sprintf("%s", methodName[4:])
-	} else if methodName[:3] == "Put" || methodName[:3] == "PUT" {
-		httpMethod = "PUT"
-		p = fmt.Sprintf("%s", methodName[3:])
-	} else if methodName[:6] == "Option" {
-		httpMethod = "OPTION"
-		p = fmt.Sprintf("%s", methodName[6:])
+func (l *GinEngine) parseRoute(methodName string) *Route {
+	method := strings.ToUpper(string(l.defaultHttpMethod))
+	p := methodName
+
+	for _, prefix := range l.httpMethodPrefixes {
+		pre := string(prefix)
+		if strings.HasPrefix(methodName, pre) {
+			method = strings.ToUpper(pre)
+			p = strings.TrimPrefix(methodName, pre)
+			break
+		}
 	}
 
-	if p == "" && httpMethod == "" {
+	if p == "" || method == "" {
 		return nil
 	}
 
 	return &Route{
-		Path:       "/" + routeToCamel(p),
-		HttpMethod: httpMethod,
+		Path:       "/" + l.routeNamingRuleFunc(p),
+		HttpMethod: method,
 	}
 }
 
@@ -112,4 +110,22 @@ func routeToCamel(route string) string {
 	}
 
 	return route
+}
+
+// isMiddlewarer 判断是否为Controller类型
+func isMiddlewarer(c any) (Middlewarer, bool) {
+	midd, ok := c.(Middlewarer)
+	return midd, ok
+}
+
+// isController 判断是否为Controller类型
+func isController(c any) (Controller, bool) {
+	ctrl, ok := c.(Controller)
+	return ctrl, ok
+}
+
+// isMethoderMiddlewarer 判断是否为MethoderMiddlewarer类型
+func isMethoderMiddlewarer(c any) (MethoderMiddlewarer, bool) {
+	midd, ok := c.(MethoderMiddlewarer)
+	return midd, ok
 }
