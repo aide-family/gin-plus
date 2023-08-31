@@ -2,7 +2,6 @@ package ginplus
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"reflect"
 	"strings"
@@ -29,7 +28,6 @@ func newDefaultHandler(controller any, t reflect.Method, req any) gin.HandlerFun
 		respVal := t.Func.Call([]reflect.Value{reflect.ValueOf(controller), reflect.ValueOf(ctx), reqVal.Elem()})
 		if !respVal[1].IsNil() {
 			err, ok := respVal[1].Interface().(error)
-			fmt.Println(err)
 			if ok {
 				ErrorResponse(ctx, err, "request error2")
 				return
