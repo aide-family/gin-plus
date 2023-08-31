@@ -22,7 +22,7 @@ func isHandlerFunc(t reflect.Type) bool {
 	return t.Out(0).String() == GinHandleFunc
 }
 
-func (l *GinEngine) genRoute(p string, controller any) []*Route {
+func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Route {
 	t := reflect.TypeOf(controller)
 	var routes []*Route
 
@@ -50,24 +50,43 @@ func (l *GinEngine) genRoute(p string, controller any) []*Route {
 		methoderMiddlewaresMap = methoderMidd.MethoderMiddlewares()
 	}
 
-	for i := 0; i < t.NumMethod(); i++ {
-		// 解析方法名称, 生成路由, 例如: GetInfoAction -> get /info  PostPeopleAction -> post /people
-		// 通过反射获取方法的返回值类型
-		if isHandlerFunc(t.Method(i).Type) {
-			metheodName := t.Method(i).Name
-			privateMidd := methoderMiddlewaresMap[metheodName]
-			route := l.parseRoute(metheodName)
-			if route == nil {
+	if !skipAnonymous {
+		for i := 0; i < t.NumMethod(); i++ {
+			// 解析方法名称, 生成路由, 例如: GetInfoAction -> get /info  PostPeopleAction -> post /people
+			// 通过反射获取方法的返回值类型
+			if isHandlerFunc(t.Method(i).Type) {
+				metheodName := t.Method(i).Name
+				privateMidd := methoderMiddlewaresMap[metheodName]
+				route := l.parseRoute(metheodName)
+				if route == nil {
+					continue
+				}
+				route.Path = path.Join(basePath, route.Path)
+				// 组下公共中间件
+				route.Handles = append(route.Handles, middlewares...)
+				// 接口私有中间件
+				route.Handles = append(route.Handles, privateMidd...)
+				// 具体的action
+				route.Handles = append(route.Handles, t.Method(i).Func.Call([]reflect.Value{reflect.ValueOf(controller)})[0].Interface().(gin.HandlerFunc))
+				routes = append(routes, route)
+			}
+		}
+	}
+
+	if isStruct(tmp) {
+		// 递归获取内部的controller
+		for i := 0; i < tmp.NumField(); i++ {
+			field := tmp.Field(i)
+			for field.Type.Kind() == reflect.Ptr {
+				field.Type = field.Type.Elem()
+			}
+			if !isStruct(field.Type) {
 				continue
 			}
-			route.Path = path.Join(basePath, route.Path)
-			// 组下公共中间件
-			route.Handles = append(route.Handles, middlewares...)
-			// 接口私有中间件
-			route.Handles = append(route.Handles, privateMidd...)
-			// 具体的action
-			route.Handles = append(route.Handles, t.Method(i).Func.Call([]reflect.Value{reflect.ValueOf(controller)})[0].Interface().(gin.HandlerFunc))
-			routes = append(routes, route)
+
+			// new一个新的controller
+			newController := reflect.New(field.Type).Interface()
+			routes = append(routes, l.genRoute(basePath, newController, field.Anonymous)...)
 		}
 	}
 
@@ -128,4 +147,9 @@ func isController(c any) (Controller, bool) {
 func isMethoderMiddlewarer(c any) (MethoderMiddlewarer, bool) {
 	midd, ok := c.(MethoderMiddlewarer)
 	return midd, ok
+}
+
+// isStruct 判断是否为struct类型
+func isStruct(t reflect.Type) bool {
+	return t.Kind() == reflect.Struct
 }

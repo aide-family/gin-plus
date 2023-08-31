@@ -72,7 +72,7 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 	routes := make([]*Route, 0)
 	basePath := "/"
 	for _, c := range instance.controllers {
-		routes = append(routes, instance.genRoute(basePath, c)...)
+		routes = append(routes, instance.genRoute(basePath, c, false)...)
 	}
 
 	for _, route := range routes {

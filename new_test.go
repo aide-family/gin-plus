@@ -7,11 +7,31 @@ import (
 )
 
 type People struct {
+	*Img
+}
+
+type Img struct {
+	File *File
+}
+
+type File struct {
 }
 
 var _ Middlewarer = (*People)(nil)
 var _ Controller = (*People)(nil)
 var _ MethoderMiddlewarer = (*People)(nil)
+
+func (l *Img) GetInfo() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.String(200, "GetInfo")
+	}
+}
+
+func (l *File) GetFiles() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.String(200, "GetFiles")
+	}
+}
 
 func (p *People) GetInfo() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -72,10 +92,14 @@ func TestNew(t *testing.T) {
 		}),
 		WithBasePath("aide-cloud"),
 		WithHttpMethodPrefixes(Get, Post),
-		WithControllers(&People{}, &Slice{}),
+		WithControllers(&People{
+			Img: &Img{
+				File: &File{},
+			},
+		}, &Slice{}),
 		WithDefaultHttpMethod(Post),
 		WithRouteNamingRuleFunc(func(methodName string) string {
-			return routeToCamel(methodName) + "-action"
+			return routeToCamel(methodName)
 		}),
 	}
 	ginInstance := New(r, opts...)
