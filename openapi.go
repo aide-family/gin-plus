@@ -38,9 +38,10 @@ type (
 	}
 
 	Parameter struct {
-		Name   string     `yaml:"name,omitempty"`
-		In     string     `yaml:"in,omitempty"`
-		Schema SchemaInfo `yaml:"schema,omitempty"`
+		Name     string     `yaml:"name,omitempty"`
+		In       string     `yaml:"in,omitempty"`
+		Required bool       `yaml:"required,omitempty"`
+		Schema   SchemaInfo `yaml:"schema,omitempty"`
 	}
 
 	ApiHttpMethod struct {
@@ -110,12 +111,21 @@ func (l *GinEngine) apiToYamlModel() Path {
 					infos := route.ReqParams.Info
 					res := make([]Parameter, 0, len(infos))
 					for _, fieldInfo := range infos {
-						if fieldInfo.Tags.FormKey == "" {
+						if fieldInfo.Tags.FormKey == "" && fieldInfo.Tags.UriKey == "" {
 							continue
 						}
+						name := fieldInfo.Tags.FormKey
+						in := "query"
+						isUri := fieldInfo.Tags.UriKey != "" && fieldInfo.Tags.UriKey != "-"
+						if isUri {
+							name = fieldInfo.Tags.UriKey
+							in = "path"
+						}
+
 						res = append(res, Parameter{
-							Name: fieldInfo.Tags.FormKey,
-							In:   "query",
+							Name:     name,
+							In:       in,
+							Required: isUri,
 							Schema: SchemaInfo{
 								Type:        getTypeMap(fieldInfo.Type),
 								Title:       fieldInfo.Tags.Title,
@@ -132,8 +142,8 @@ func (l *GinEngine) apiToYamlModel() Path {
 						"application/json": {
 							Schema: SchemaInfo{
 								Type:       "object",
-								Title:      route.RespParams.Name,
-								Properties: genProperties(route.RespParams.Info),
+								Title:      route.ReqParams.Name,
+								Properties: genProperties(route.ReqParams.Info),
 							},
 						},
 					},
@@ -152,7 +162,7 @@ func genProperties(fieldList []FieldInfo) map[string]SchemaInfo {
 	resp := make(map[string]SchemaInfo)
 	for _, info := range fieldList {
 		jsonKey := info.Tags.JsonKey
-		if jsonKey == "-" {
+		if jsonKey == "-" || jsonKey == "" {
 			continue
 		}
 		resp[info.Tags.JsonKey] = SchemaInfo{

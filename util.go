@@ -1,6 +1,7 @@
 package ginplus
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"path"
 	"reflect"
@@ -102,19 +103,30 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 			if isCb {
 				reqName := req.Name()
 				respName := resp.Name()
+				reqTagInfo := getTag(req)
 				apiRoute := ApiRoute{
 					Path:       route.Path,
 					HttpMethod: strings.ToLower(route.HttpMethod),
 					MethodName: metheodName,
 					ReqParams: Field{
 						Name: reqName,
-						Info: getTag(req),
+						Info: reqTagInfo,
 					},
 					RespParams: Field{
 						Name: respName,
 						Info: getTag(resp),
 					},
 				}
+
+				// 出来Uri参数
+				for _, tagInfo := range reqTagInfo {
+					uriKey := tagInfo.Tags.UriKey
+					if uriKey != "" && uriKey != "-" {
+						route.Path = path.Join(route.Path, fmt.Sprintf(":%s", uriKey))
+					}
+				}
+				apiRoute.Path = route.Path
+
 				if _, ok := l.ApiRoutes[route.Path]; !ok {
 					l.ApiRoutes[route.Path] = make([]ApiRoute, 0, 1)
 				}
@@ -147,42 +159,6 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 
 	return routes
 }
-
-//// getFields 获取结构体的字段
-//func getFields(t reflect.Type, parentName string) map[string]Param {
-//	if t.Kind() != reflect.Struct || t.Kind() != reflect.Ptr {
-//		return nil
-//	}
-//	parentNameTmp := parentName
-//	if parentName != "" {
-//		parentName = parentName + "."
-//	}
-//	fields := make(map[string]Param)
-//	for i := 0; i < t.NumField(); i++ {
-//		field := t.FieldInfo(i)
-//		for field.Type.Kind() == reflect.Ptr {
-//			field.Type = field.Type.Elem()
-//		}
-//
-//		fieldName := parentNameTmp + field.Name
-//
-//		if !isStruct(field.Type) {
-//			fields[fieldName] = Param{
-//				Name:  fieldName,
-//				Type:  field.Type.String(),
-//				FieldInfo: nil,
-//			}
-//			continue
-//		}
-//
-//		fields[fieldName] = Param{
-//			Name:  fieldName,
-//			Type:  field.Type.String(),
-//			FieldInfo: getFields(field.Type, fieldName),
-//		}
-//	}
-//	return fields
-//}
 
 // parseRoute 从方法名称中解析出路由和请求方式
 func (l *GinEngine) parseRoute(methodName string) *Route {

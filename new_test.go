@@ -123,7 +123,7 @@ type (
 	}
 
 	MyControllerReq struct {
-		Name    string `json:"name"`
+		Name    string `form:"name"`
 		Id      uint   `uri:"id"`
 		Keyword string `form:"keyword"`
 	}
@@ -137,6 +137,7 @@ type (
 )
 
 func (l *MyController) GetInfo(ctx context.Context, req MyControllerReq) (*MyControllerResp, error) {
+	log.Println(req)
 	return nil, nil
 }
 
@@ -151,4 +152,18 @@ func TestGenApi(t *testing.T) {
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.genOpenApiYaml(ginInstance.apiToYamlModel())
+	ginInstance.Run()
+}
+
+func TestGenApiRun(t *testing.T) {
+	r := gin.Default()
+	opts := []Option{
+		WithBasePath("aide-cloud"),
+		WithControllers(&MyController{}),
+		WithDefaultHttpMethod(Post),
+		WithTitle("aide-cloud-api"),
+		WithVersion("v1"),
+	}
+	ginInstance := New(r, opts...)
+	ginInstance.Run()
 }

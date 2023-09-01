@@ -14,10 +14,10 @@ type Response struct {
 	Error string `json:"error"`
 }
 
-func newDefaultHandler(controller any, t reflect.Method, req any) gin.HandlerFunc {
+func newDefaultHandler(controller any, t reflect.Method, req reflect.Type) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// new一个req的实例
-		reqVal := reflect.New(reflect.TypeOf(req).Elem())
+		reqVal := reflect.New(req)
 		// 绑定请求参数
 		if err := Bind(ctx, reqVal.Interface()); err != nil {
 			ErrorResponse(ctx, err, "request error1")
