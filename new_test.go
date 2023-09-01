@@ -111,8 +111,13 @@ func TestNew(t *testing.T) {
 		WithRouteNamingRuleFunc(func(methodName string) string {
 			return routeToCamel(methodName)
 		}),
-		WithTitle("aide-cloud-api"),
-		WithVersion("v1"),
+		WithApiConfig(ApiConfig{
+			Openapi: "3.0.3",
+			Info: Info{
+				Title:   "aide-cloud-api",
+				Version: "v1",
+			},
+		}),
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.Run(":8080")
@@ -147,12 +152,9 @@ func TestGenApi(t *testing.T) {
 		WithBasePath("aide-cloud"),
 		WithControllers(&MyController{}),
 		WithDefaultHttpMethod(Post),
-		WithTitle("aide-cloud-api"),
-		WithVersion("v1"),
 	}
 	ginInstance := New(r, opts...)
-	ginInstance.genOpenApiYaml(ginInstance.apiToYamlModel())
-	ginInstance.Run()
+	ginInstance.genOpenApiYaml()
 }
 
 func TestGenApiRun(t *testing.T) {
@@ -161,8 +163,73 @@ func TestGenApiRun(t *testing.T) {
 		WithBasePath("aide-cloud"),
 		WithControllers(&MyController{}),
 		WithDefaultHttpMethod(Post),
-		WithTitle("aide-cloud-api"),
-		WithVersion("v1"),
+	}
+	ginInstance := New(r, opts...)
+	ginInstance.Run()
+}
+
+type (
+	MiddController struct {
+		ChildMiddController *ChildMiddController
+	}
+
+	ChildMiddController struct {
+	}
+)
+
+func (l *ChildMiddController) Middlewares() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		func(ctx *gin.Context) {
+			log.Println("ChildMiddController")
+		},
+	}
+}
+
+func (l *ChildMiddController) Info() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		log.Println("Info action")
+	}
+}
+
+type DetailxReq struct {
+	Id uint `uri:"id"`
+}
+
+type DetailxResp struct {
+	Name string `json:"name"`
+	Id   uint   `json:"id"`
+}
+
+func (l *ChildMiddController) Detile(ctx context.Context, req *DetailxReq) (*DetailxResp, error) {
+	log.Println("Detile")
+	return &DetailxResp{Name: "aide-cloud", Id: req.Id}, nil
+}
+
+func (l *MiddController) Middlewares() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		func(ctx *gin.Context) {
+			log.Println("MiddController")
+		},
+	}
+}
+
+func (l *MiddController) Parent() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		log.Println("Parent action")
+	}
+}
+
+var _ Middlewarer = (*MiddController)(nil)
+var _ Middlewarer = (*ChildMiddController)(nil)
+
+func TestGenApiRunMidd(t *testing.T) {
+	r := gin.Default()
+	opts := []Option{
+		WithBasePath("aide-cloud"),
+		WithControllers(&MiddController{
+			ChildMiddController: &ChildMiddController{},
+		}),
+		WithDefaultHttpMethod(Get),
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.Run()

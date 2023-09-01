@@ -1,12 +1,10 @@
 package ginplus
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/spf13/viper"
 )
 
-const defaultOpenApiYaml = "openapi-tmp.yaml"
+const defaultOpenApiYaml = "openapi.yaml"
 
 type (
 	Info struct {
@@ -61,19 +59,16 @@ type (
 	}
 )
 
-func (l *GinEngine) genOpenApiYaml(outer Path) {
-	b, _ := json.Marshal(l.ApiRoutes)
-	fmt.Println(string(b))
-
+func (l *GinEngine) genOpenApiYaml() {
 	viper.SetConfigFile(defaultOpenApiYaml)
 	viper.SetConfigPermissions(0644)
 	viper.SetConfigType("yaml")
-	viper.Set("openapi", "3.0.3")
+	viper.Set("openapi", l.apiConfig.Openapi)
 	viper.Set("info", Info{
-		Title:   l.Title,
-		Version: l.Version,
+		Title:   l.apiConfig.Info.Title,
+		Version: l.apiConfig.Info.Version,
 	})
-	viper.Set("paths", outer)
+	viper.Set("paths", l.apiToYamlModel())
 
 	if err := viper.WriteConfig(); err != nil {
 		panic(err)
@@ -81,7 +76,7 @@ func (l *GinEngine) genOpenApiYaml(outer Path) {
 }
 
 func (l *GinEngine) apiToYamlModel() Path {
-	apiReoutes := l.ApiRoutes
+	apiReoutes := l.apiRoutes
 
 	apiPath := make(Path)
 	for url, info := range apiReoutes {

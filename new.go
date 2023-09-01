@@ -19,9 +19,14 @@ type (
 		routeNamingRuleFunc func(methodName string) string
 
 		// 文档配置
-		Title     string
-		Version   string
-		ApiRoutes map[string][]ApiRoute
+		apiConfig ApiConfig
+		apiRoutes map[string][]ApiRoute
+	}
+
+	ApiConfig struct {
+		Openapi      string
+		Info         Info
+		GenApiEnable bool
 	}
 
 	RouteNamingRuleFunc func(methodName string) string
@@ -79,7 +84,15 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 		httpMethodPrefixes:  defaultPrefixes,
 		defaultHttpMethod:   Get,
 		routeNamingRuleFunc: routeToCamel,
-		ApiRoutes:           make(map[string][]ApiRoute),
+		apiRoutes:           make(map[string][]ApiRoute),
+		apiConfig: ApiConfig{
+			Openapi: "3.0.3",
+			Info: Info{
+				Title:   "aide-cloud-api",
+				Version: "v1",
+			},
+			GenApiEnable: true,
+		},
 	}
 	for _, opt := range opts {
 		opt(instance)
@@ -90,11 +103,15 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 	routes := make([]*Route, 0)
 	basePath := "/"
 	for _, c := range instance.controllers {
-		routes = append(routes, instance.genRoute(basePath, c, false)...)
+		routes = append(routes, instance.genRoute(basePath, c, nil, false)...)
 	}
 
 	for _, route := range routes {
 		instance.Handle(strings.ToUpper(route.HttpMethod), path.Join(instance.basePath, route.Path), route.Handles...)
+	}
+
+	if instance.apiConfig.GenApiEnable {
+		instance.genOpenApiYaml()
 	}
 
 	return instance
@@ -142,16 +159,9 @@ func WithRouteNamingRuleFunc(ruleFunc RouteNamingRuleFunc) Option {
 	}
 }
 
-// WithTitle sets the title.
-func WithTitle(title string) Option {
+// WithApiConfig sets the title.
+func WithApiConfig(c ApiConfig) Option {
 	return func(g *GinEngine) {
-		g.Title = title
-	}
-}
-
-// WithVersion sets the version.
-func WithVersion(version string) Option {
-	return func(g *GinEngine) {
-		g.Version = version
+		g.apiConfig = c
 	}
 }

@@ -16,8 +16,13 @@ type Response struct {
 
 func newDefaultHandler(controller any, t reflect.Method, req reflect.Type) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		reqTmp := req
+		for reqTmp.Kind() == reflect.Ptr {
+			reqTmp = reqTmp.Elem()
+		}
 		// new一个req的实例
-		reqVal := reflect.New(req)
+		reqVal := reflect.New(reqTmp)
+
 		// 绑定请求参数
 		if err := Bind(ctx, reqVal.Interface()); err != nil {
 			ErrorResponse(ctx, err, "request error1")
@@ -25,7 +30,7 @@ func newDefaultHandler(controller any, t reflect.Method, req reflect.Type) gin.H
 		}
 
 		// 调用方法
-		respVal := t.Func.Call([]reflect.Value{reflect.ValueOf(controller), reflect.ValueOf(ctx), reqVal.Elem()})
+		respVal := t.Func.Call([]reflect.Value{reflect.ValueOf(controller), reflect.ValueOf(ctx), reqVal})
 		if !respVal[1].IsNil() {
 			err, ok := respVal[1].Interface().(error)
 			if ok {

@@ -49,7 +49,7 @@ func isCallBack(t reflect.Type) (reflect.Type, reflect.Type, bool) {
 	return req, resp, true
 }
 
-func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Route {
+func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerFunc, skipAnonymous bool) []*Route {
 	t := reflect.TypeOf(controller)
 	var routes []*Route
 
@@ -86,6 +86,8 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 				continue
 			}
 			route.Path = path.Join(basePath, route.Path)
+			// 父级公共中间件
+			route.Handles = append(route.Handles, parentMidd...)
 			// 组下公共中间件
 			route.Handles = append(route.Handles, middlewares...)
 			// 接口私有中间件
@@ -118,7 +120,7 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 					},
 				}
 
-				// 出来Uri参数
+				// 处理Uri参数
 				for _, tagInfo := range reqTagInfo {
 					uriKey := tagInfo.Tags.UriKey
 					if uriKey != "" && uriKey != "-" {
@@ -127,10 +129,10 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 				}
 				apiRoute.Path = route.Path
 
-				if _, ok := l.ApiRoutes[route.Path]; !ok {
-					l.ApiRoutes[route.Path] = make([]ApiRoute, 0, 1)
+				if _, ok := l.apiRoutes[route.Path]; !ok {
+					l.apiRoutes[route.Path] = make([]ApiRoute, 0, 1)
 				}
-				l.ApiRoutes[route.Path] = append(l.ApiRoutes[route.Path], apiRoute)
+				l.apiRoutes[route.Path] = append(l.apiRoutes[route.Path], apiRoute)
 
 				// 具体的action
 				route.Handles = append(route.Handles, newDefaultHandler(controller, t.Method(i), req))
@@ -153,7 +155,7 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 
 			// new一个新的controller
 			newController := reflect.New(field.Type).Interface()
-			routes = append(routes, l.genRoute(basePath, newController, field.Anonymous)...)
+			routes = append(routes, l.genRoute(basePath, newController, middlewares, field.Anonymous)...)
 		}
 	}
 
