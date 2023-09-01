@@ -111,7 +111,44 @@ func TestNew(t *testing.T) {
 		WithRouteNamingRuleFunc(func(methodName string) string {
 			return routeToCamel(methodName)
 		}),
+		WithTitle("aide-cloud-api"),
+		WithVersion("v1"),
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.Run(":8080")
+}
+
+type (
+	MyController struct {
+	}
+
+	MyControllerReq struct {
+		Name    string `json:"name"`
+		Id      uint   `uri:"id"`
+		Keyword string `form:"keyword"`
+	}
+
+	MyControllerResp struct {
+		Name string `json:"name"`
+		Id   uint   `json:"id"`
+		Age  int    `json:"age"`
+		Data any    `json:"data"`
+	}
+)
+
+func (l *MyController) GetInfo(ctx context.Context, req MyControllerReq) (*MyControllerResp, error) {
+	return nil, nil
+}
+
+func TestGenApi(t *testing.T) {
+	r := gin.Default()
+	opts := []Option{
+		WithBasePath("aide-cloud"),
+		WithControllers(&MyController{}),
+		WithDefaultHttpMethod(Post),
+		WithTitle("aide-cloud-api"),
+		WithVersion("v1"),
+	}
+	ginInstance := New(r, opts...)
+	ginInstance.genOpenApiYaml(ginInstance.apiToYamlModel())
 }

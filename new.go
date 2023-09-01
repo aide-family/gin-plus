@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"path"
+	"strings"
 )
 
 type (
@@ -16,6 +17,11 @@ type (
 		defaultHttpMethod  httpMethod
 		// 自定义路由命名规则函数
 		routeNamingRuleFunc func(methodName string) string
+
+		// 文档配置
+		Title     string
+		Version   string
+		ApiRoutes map[string][]ApiRoute
 	}
 
 	RouteNamingRuleFunc func(methodName string) string
@@ -36,6 +42,14 @@ type (
 		Path       string
 		HttpMethod string
 		Handles    []gin.HandlerFunc
+	}
+
+	ApiRoute struct {
+		Path       string
+		HttpMethod string
+		MethodName string
+		ReqParams  Field
+		RespParams Field
 	}
 
 	Option func(*GinEngine)
@@ -65,6 +79,7 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 		httpMethodPrefixes:  defaultPrefixes,
 		defaultHttpMethod:   Get,
 		routeNamingRuleFunc: routeToCamel,
+		ApiRoutes:           make(map[string][]ApiRoute),
 	}
 	for _, opt := range opts {
 		opt(instance)
@@ -79,7 +94,7 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 	}
 
 	for _, route := range routes {
-		instance.Handle(route.HttpMethod, path.Join(instance.basePath, route.Path), route.Handles...)
+		instance.Handle(strings.ToUpper(route.HttpMethod), path.Join(instance.basePath, route.Path), route.Handles...)
 	}
 
 	return instance
@@ -124,5 +139,19 @@ func WithDefaultHttpMethod(method httpMethod) Option {
 func WithRouteNamingRuleFunc(ruleFunc RouteNamingRuleFunc) Option {
 	return func(g *GinEngine) {
 		g.routeNamingRuleFunc = ruleFunc
+	}
+}
+
+// WithTitle sets the title.
+func WithTitle(title string) Option {
+	return func(g *GinEngine) {
+		g.Title = title
+	}
+}
+
+// WithVersion sets the version.
+func WithVersion(version string) Option {
+	return func(g *GinEngine) {
+		g.Version = version
 	}
 }

@@ -23,7 +23,7 @@ func isHandlerFunc(t reflect.Type) bool {
 }
 
 // isCallBack 判断是否为CallBack类型
-func isCallBack(t reflect.Type) (any, any, bool) {
+func isCallBack(t reflect.Type) (reflect.Type, reflect.Type, bool) {
 	// 通过反射获取方法的返回值类型
 	if t.Kind() != reflect.Func {
 		return nil, nil, false
@@ -42,8 +42,8 @@ func isCallBack(t reflect.Type) (any, any, bool) {
 	}
 
 	// new一个out 0的实例和in 2的实例
-	req := reflect.New(t.In(2)).Interface()
-	resp := reflect.New(t.Out(0)).Interface()
+	req := t.In(2)
+	resp := t.Out(0)
 
 	return req, resp, true
 }
@@ -98,8 +98,28 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 			}
 
 			// 判断是否为CallBack类型
-			req, _, isCb := isCallBack(t.Method(i).Type)
+			req, resp, isCb := isCallBack(t.Method(i).Type)
 			if isCb {
+				reqName := req.Name()
+				respName := resp.Name()
+				apiRoute := ApiRoute{
+					Path:       route.Path,
+					HttpMethod: strings.ToLower(route.HttpMethod),
+					MethodName: metheodName,
+					ReqParams: Field{
+						Name: reqName,
+						Info: getTag(req),
+					},
+					RespParams: Field{
+						Name: respName,
+						Info: getTag(resp),
+					},
+				}
+				if _, ok := l.ApiRoutes[route.Path]; !ok {
+					l.ApiRoutes[route.Path] = make([]ApiRoute, 0, 1)
+				}
+				l.ApiRoutes[route.Path] = append(l.ApiRoutes[route.Path], apiRoute)
+
 				// 具体的action
 				route.Handles = append(route.Handles, newDefaultHandler(controller, t.Method(i), req))
 				routes = append(routes, route)
@@ -128,15 +148,51 @@ func (l *GinEngine) genRoute(p string, controller any, skipAnonymous bool) []*Ro
 	return routes
 }
 
+//// getFields 获取结构体的字段
+//func getFields(t reflect.Type, parentName string) map[string]Param {
+//	if t.Kind() != reflect.Struct || t.Kind() != reflect.Ptr {
+//		return nil
+//	}
+//	parentNameTmp := parentName
+//	if parentName != "" {
+//		parentName = parentName + "."
+//	}
+//	fields := make(map[string]Param)
+//	for i := 0; i < t.NumField(); i++ {
+//		field := t.FieldInfo(i)
+//		for field.Type.Kind() == reflect.Ptr {
+//			field.Type = field.Type.Elem()
+//		}
+//
+//		fieldName := parentNameTmp + field.Name
+//
+//		if !isStruct(field.Type) {
+//			fields[fieldName] = Param{
+//				Name:  fieldName,
+//				Type:  field.Type.String(),
+//				FieldInfo: nil,
+//			}
+//			continue
+//		}
+//
+//		fields[fieldName] = Param{
+//			Name:  fieldName,
+//			Type:  field.Type.String(),
+//			FieldInfo: getFields(field.Type, fieldName),
+//		}
+//	}
+//	return fields
+//}
+
 // parseRoute 从方法名称中解析出路由和请求方式
 func (l *GinEngine) parseRoute(methodName string) *Route {
-	method := strings.ToUpper(string(l.defaultHttpMethod))
+	method := strings.ToLower(string(l.defaultHttpMethod))
 	p := methodName
 
 	for _, prefix := range l.httpMethodPrefixes {
 		pre := string(prefix)
 		if strings.HasPrefix(methodName, pre) {
-			method = strings.ToUpper(pre)
+			method = strings.ToLower(pre)
 			p = strings.TrimPrefix(methodName, pre)
 			break
 		}
