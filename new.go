@@ -2,9 +2,13 @@ package ginplus
 
 import (
 	"context"
+	"io/fs"
+	"net/http"
+	"os"
 	"path"
 	"strings"
 
+	"github.com/aide-cloud/gin-plus/swagger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -113,6 +117,13 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 
 	if instance.apiConfig.GenApiEnable {
 		instance.genOpenApiYaml()
+		fp, _ := fs.Sub(swagger.Dist, "dist")
+		r.StaticFS("/swagger-ui", http.FS(fp))
+		instance.Any("/openapi/doc/swagger", func(ctx *gin.Context) {
+			file, _ := os.ReadFile("openapi.yaml")
+			ctx.Writer.Header().Set("Content-Type", "text/yaml; charset=utf-8")
+			ctx.Writer.Write(file)
+		})
 	}
 
 	return instance
