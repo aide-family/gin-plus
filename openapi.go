@@ -33,6 +33,10 @@ type (
 		Content     ApiContent `yaml:"content,omitempty"`
 	}
 
+	ApiRequest struct {
+		Content ApiContent `yaml:"content,omitempty"`
+	}
+
 	Parameter struct {
 		Name   string     `yaml:"name,omitempty"`
 		In     string     `yaml:"in,omitempty"`
@@ -44,6 +48,7 @@ type (
 		Tags        []string            `yaml:"tags,omitempty"`
 		Responses   map[int]ApiResponse `yaml:"responses,omitempty"`
 		Parameters  []Parameter         `yaml:"parameters,omitempty"`
+		RequestBody ApiRequest          `yaml:"requestBody,omitempty"`
 	}
 
 	Path map[string]map[string]ApiHttpMethod
@@ -122,6 +127,17 @@ func (l *GinEngine) apiToYamlModel() Path {
 
 					return res
 				}(),
+				RequestBody: ApiRequest{
+					Content: map[string]Schema{
+						"application/json": {
+							Schema: SchemaInfo{
+								Type:       "object",
+								Title:      route.RespParams.Name,
+								Properties: genProperties(route.RespParams.Info),
+							},
+						},
+					},
+				},
 			}
 		}
 		apiPath[url] = methodRoute
@@ -135,6 +151,10 @@ func genProperties(fieldList []FieldInfo) map[string]SchemaInfo {
 	}
 	resp := make(map[string]SchemaInfo)
 	for _, info := range fieldList {
+		jsonKey := info.Tags.JsonKey
+		if jsonKey == "-" {
+			continue
+		}
 		resp[info.Tags.JsonKey] = SchemaInfo{
 			Type:        getTypeMap(info.Type),
 			Title:       info.Tags.Title,

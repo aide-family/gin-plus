@@ -131,7 +131,7 @@ type (
 	MyControllerResp struct {
 		Name string `json:"name"`
 		Id   uint   `json:"id"`
-		Age  int    `json:"age"`
+		Age  int    `json:"-"`
 		Data any    `json:"data"`
 	}
 )

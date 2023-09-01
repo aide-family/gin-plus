@@ -50,8 +50,7 @@ func getTag(t reflect.Type) []FieldInfo {
 		}
 
 		tagInfo := Tag{
-			Title:   fieldName,
-			JsonKey: fieldName,
+			Title: fieldName,
 		}
 		for _, tagKey := range tags {
 			tagVal, ok := field.Tag.Lookup(tagKey)
