@@ -2,9 +2,10 @@ package ginplus
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
 	"reflect"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 )
 
 type A struct {

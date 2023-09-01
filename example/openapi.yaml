@@ -1,0 +1,134 @@
+info:
+    title: aide-cloud-api
+    version: v1
+openapi: 3.0.3
+paths:
+    /api/detail/:id:
+        get:
+            operationId: GetDetail
+            responses:
+                200:
+                    description: ""
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        title: Id
+                                    name:
+                                        type: string
+                                        title: Name
+                                    remark:
+                                        type: string
+                                        title: Remark
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    title: Id
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+    /api/info/:id:
+        delete:
+            operationId: DeleteInfo
+            responses:
+                200:
+                    description: ""
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        title: Id
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    title: Id
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+    /api/list:
+        get:
+            operationId: GetList
+            responses:
+                200:
+                    description: ""
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    list:
+                                        type: object
+                                        title: List
+                                    total:
+                                        type: object
+                                        title: Total
+            parameters:
+                - name: current
+                  in: query
+                  schema:
+                    type: integer
+                    title: Current
+                - name: size
+                  in: query
+                  schema:
+                    type: integer
+                    title: Size
+                - name: keyworld
+                  in: query
+                  schema:
+                    type: string
+                    title: Keryworld
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+    /api/updateInfo/:id:
+        get:
+            operationId: UpdateInfo
+            responses:
+                200:
+                    description: ""
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        title: Id
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    title: Id
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    title: Name
+                                remark:
+                                    type: string
+                                    title: Remark

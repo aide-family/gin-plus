@@ -1,35 +1,96 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	ginplush "github.com/aide-cloud/gin-plus"
-
 	"github.com/gin-gonic/gin"
 )
 
-type People struct {
+type (
+	Api struct {
+	}
+
+	ApiDetailReq struct {
+		Id uint `uri:"id"`
+	}
+
+	ApiDetailResp struct {
+		Id     uint   `json:"id"`
+		Name   string `json:"name"`
+		Remark string `json:"remark"`
+	}
+
+	ApiListReq struct {
+		Current   int    `form:"current"`
+		Size      int    `form:"size"`
+		Keryworld string `form:"keyworld"`
+	}
+	ApiListResp struct {
+		Total int64          `json:"total"`
+		List  []*ApiInfoItem `json:"list"`
+	}
+
+	ApiInfoItem struct {
+		Name   string `json:"name"`
+		Id     uint   `json:"id"`
+		Remark string `json:"remark"`
+	}
+
+	ApiUpdateReq struct {
+		Id     uint   `uri:"id"`
+		Name   string `json:"name"`
+		Remark string `json:"remark"`
+	}
+	ApiUpdateResp struct {
+		Id uint `json:"id"`
+	}
+
+	DelApiReq struct {
+		Id uint `uri:"id"`
+	}
+
+	DelApiResp struct {
+		Id uint `json:"id"`
+	}
+)
+
+func (l *Api) GetDetail(ctx context.Context, req *ApiDetailReq) (*ApiDetailResp, error) {
+	log.Println("Api.GetDetail")
+	return &ApiDetailResp{
+		Id:     req.Id,
+		Name:   "demo",
+		Remark: "hello world",
+	}, nil
 }
 
-func (p *People) GetInfo() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ctx.String(200, "GetInfo")
-	}
+func (l *Api) GetList(ctx context.Context, req *ApiListReq) (*ApiListResp, error) {
+	log.Println("Api.GetList", req)
+	return &ApiListResp{
+		Total: 100,
+		List: []*ApiInfoItem{
+			{
+				Id:     10,
+				Name:   "demo",
+				Remark: "hello world",
+			},
+		},
+	}, nil
 }
 
-func (p *People) Middlewares() []gin.HandlerFunc {
-	return []gin.HandlerFunc{
-		func(context *gin.Context) {
-			log.Println("middleware1")
-		},
-		func(context *gin.Context) {
-			log.Println("middleware2")
-		},
-	}
+func (l *Api) UpdateInfo(ctx context.Context, req *ApiUpdateReq) (*ApiUpdateResp, error) {
+	log.Println("Api.UpdateInfo")
+	return &ApiUpdateResp{Id: req.Id}, nil
+}
+
+func (l *Api) DeleteInfo(ctx context.Context, req *DelApiReq) (*DelApiResp, error) {
+	log.Println("Api.DeleteInfo")
+	return &DelApiResp{Id: req.Id}, nil
 }
 
 func main() {
 	r := gin.Default()
-	ginInstance := ginplush.New(r, ginplush.WithControllers(&People{}))
+	ginInstance := ginplush.New(r, ginplush.WithControllers(&Api{}))
 	ginInstance.Run(":8080")
 }

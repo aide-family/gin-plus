@@ -172,5 +172,5 @@ func main() {
 
 * 运行截图
 
-![img.png](run-time/img.png)
+![img.png](doc/img.png)
 
