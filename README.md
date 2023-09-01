@@ -174,3 +174,122 @@ func main() {
 
 ![img.png](doc/img.png)
 
+## v0.0.6+之后
+
+* 增加新的方法格式注入
+
+除了上述的直接实现`gin.HandlerFunc`类型的方法可以注入之外, 从v0.0.6版本开始, 新增了`func(ctx context.Context, req *ApiReq) (*ApiResp, error)`格式的方法也能注入, 这里的req和resp可以是结构体, 也可以是结构体指针类型, 入参第一参数必须为context.Context, 出参只允许两个返回值, 且第二返回值必须为error类型
+
+如下所示:
+
+我们定义了一个Api的注入对象, 并增加了CRUD的四个方法, 这四个方法都为上面提到的函数格式, 完成这些后, 通过`WithControllers`方法把该对象注入到ginplus中, 从而实现`gin`路由的注册和`api`文档生成, 启动时候, 会在当前目录下生成一个`openapi.yaml`文件, 该文件就是你的注入对象所生成api文档
+
+当然, 我们也提供了关闭生成api文档功能的开关, `ApiConfig`的`GenApiEnable`属性为`false`时候, 会关闭文档生成和文档预览功能, 通过`WithApiConfig`完成控制
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	ginplush "github.com/aide-cloud/gin-plus"
+
+	"github.com/gin-gonic/gin"
+)
+
+type (
+	Api struct {
+	}
+
+	ApiDetailReq struct {
+		Id uint `uri:"id"`
+	}
+
+	ApiDetailResp struct {
+		Id     uint   `json:"id"`
+		Name   string `json:"name"`
+		Remark string `json:"remark"`
+	}
+
+	ApiListReq struct {
+		Current   int    `form:"current"`
+		Size      int    `form:"size"`
+		Keryworld string `form:"keyworld"`
+	}
+	ApiListResp struct {
+		Total   int64          `json:"total"`
+		Current int            `json:"current"`
+		Size    int            `json:"size"`
+		List    []*ApiInfoItem `json:"list"`
+	}
+
+	ApiInfoItem struct {
+		Name   string `json:"name"`
+		Id     uint   `json:"id"`
+		Remark string `json:"remark"`
+	}
+
+	ApiUpdateReq struct {
+		Id     uint   `uri:"id"`
+		Name   string `json:"name"`
+		Remark string `json:"remark"`
+	}
+	ApiUpdateResp struct {
+		Id uint `json:"id"`
+	}
+
+	DelApiReq struct {
+		Id uint `uri:"id"`
+	}
+
+	DelApiResp struct {
+		Id uint `json:"id"`
+	}
+)
+
+func (l *Api) GetDetail(ctx context.Context, req *ApiDetailReq) (*ApiDetailResp, error) {
+	log.Println("Api.GetDetail")
+	return &ApiDetailResp{
+		Id:     req.Id,
+		Name:   "demo",
+		Remark: "hello world",
+	}, nil
+}
+
+func (l *Api) GetList(ctx context.Context, req *ApiListReq) (*ApiListResp, error) {
+	log.Println("Api.GetList", req)
+	return &ApiListResp{
+		Total:   100,
+		Current: req.Current,
+		Size:    req.Size,
+		List: []*ApiInfoItem{
+			{
+				Id:     10,
+				Name:   "demo",
+				Remark: "hello world",
+			},
+		},
+	}, nil
+}
+
+func (l *Api) UpdateInfo(ctx context.Context, req *ApiUpdateReq) (*ApiUpdateResp, error) {
+	log.Println("Api.UpdateInfo")
+	return &ApiUpdateResp{Id: req.Id}, nil
+}
+
+func (l *Api) DeleteInfo(ctx context.Context, req *DelApiReq) (*DelApiResp, error) {
+	log.Println("Api.DeleteInfo")
+	return &DelApiResp{Id: req.Id}, nil
+}
+
+func main() {
+	r := gin.Default()
+	opts := []ginplush.Option{
+		// 路由controller, 会根据该controller的方法名注册路由
+		ginplush.WithControllers(&Api{}),
+	}
+	ginInstance := ginplush.New(r, opts...)
+	ginInstance.Run(":8080")
+}
+```
