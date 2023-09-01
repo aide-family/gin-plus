@@ -83,9 +83,9 @@ func (l *Api) UpdateInfo(ctx context.Context, req *ApiUpdateReq) (*ApiUpdateResp
 	return &ApiUpdateResp{Id: req.Id}, nil
 }
 
-func (l *Api) DeleteInfo(ctx context.Context, req *ApiDetailReq) (*ApiDetailResp, error) {
+func (l *Api) DeleteInfo(ctx context.Context, req *DelApiReq) (*DelApiResp, error) {
 	log.Println("Api.DeleteInfo")
-	return &ApiDetailResp{Id: req.Id}, nil
+	return &DelApiResp{Id: req.Id}, nil
 }
 
 func TestGinEngine_execute(t *testing.T) {
