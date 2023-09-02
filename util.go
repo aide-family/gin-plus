@@ -168,10 +168,10 @@ func (l *GinEngine) parseRoute(methodName string) *Route {
 	method := strings.ToLower(string(l.defaultHttpMethod))
 	p := methodName
 
-	for _, prefix := range l.httpMethodPrefixes {
-		pre := string(prefix)
+	for prefix, httpMethodKey := range l.httpMethodPrefixes {
+		pre := prefix
 		if strings.HasPrefix(methodName, pre) {
-			method = strings.ToLower(pre)
+			method = strings.ToLower(string(httpMethodKey))
 			p = strings.TrimPrefix(methodName, pre)
 			break
 		}

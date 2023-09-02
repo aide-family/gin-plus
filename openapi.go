@@ -1,7 +1,6 @@
 package ginplus
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -203,7 +202,6 @@ func getTypeMap(typeStr string) string {
 		return typeStr
 	default:
 		if strings.HasPrefix(typeStr, "[]") {
-			fmt.Println("typeStr: ", typeStr)
 			return "array"
 		}
 		return "object"

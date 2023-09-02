@@ -17,7 +17,7 @@ type (
 		*gin.Engine
 		middlewares        []gin.HandlerFunc
 		controllers        []any
-		httpMethodPrefixes []httpMethod
+		httpMethodPrefixes map[string]httpMethod
 		basePath           string
 		defaultHttpMethod  httpMethod
 		// 自定义路由命名规则函数
@@ -62,9 +62,13 @@ type (
 		RespParams Field
 	}
 
-	Option func(*GinEngine)
+	OptionFun func(*GinEngine)
 
 	httpMethod string
+	HttpMethod struct {
+		Prefix string
+		Method httpMethod
+	}
 
 	CallBack[Req, Resp any] func(ctx context.Context, req Req) (Resp, error)
 )
@@ -76,14 +80,22 @@ const (
 	Delete httpMethod = "Delete"
 	Patch  httpMethod = "Patch"
 	Head   httpMethod = "Head"
-	Ootion httpMethod = "Option"
+	Option httpMethod = "Option"
 )
 
 // defaultPrefixes is the default prefixes.
-var defaultPrefixes = []httpMethod{Get, Post, Put, Delete, Patch, Head, Ootion}
+var defaultPrefixes = map[string]httpMethod{
+	"Get":    Get,
+	"Post":   Post,
+	"Put":    Put,
+	"Delete": Delete,
+	"Patch":  Patch,
+	"Head":   Head,
+	"Option": Option,
+}
 
 // New returns a GinEngine instance.
-func New(r *gin.Engine, opts ...Option) *GinEngine {
+func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 	instance := &GinEngine{
 		Engine:              r,
 		httpMethodPrefixes:  defaultPrefixes,
@@ -122,7 +134,7 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 		instance.GET("/openapi/doc/swagger", func(ctx *gin.Context) {
 			file, _ := os.ReadFile("openapi.yaml")
 			ctx.Writer.Header().Set("Content-Type", "text/yaml; charset=utf-8")
-			ctx.Writer.Write(file)
+			_, _ = ctx.Writer.Write(file)
 		})
 	}
 
@@ -130,49 +142,73 @@ func New(r *gin.Engine, opts ...Option) *GinEngine {
 }
 
 // WithControllers sets the controllers.
-func WithControllers(controllers ...any) Option {
+func WithControllers(controllers ...any) OptionFun {
 	return func(g *GinEngine) {
 		g.controllers = controllers
 	}
 }
 
 // WithMiddlewares sets the middlewares.
-func WithMiddlewares(middlewares ...gin.HandlerFunc) Option {
+func WithMiddlewares(middlewares ...gin.HandlerFunc) OptionFun {
 	return func(g *GinEngine) {
 		g.middlewares = middlewares
 	}
 }
 
 // WithHttpMethodPrefixes sets the prefixes.
-func WithHttpMethodPrefixes(prefixes ...httpMethod) Option {
+func WithHttpMethodPrefixes(prefixes ...HttpMethod) OptionFun {
 	return func(g *GinEngine) {
-		g.httpMethodPrefixes = prefixes
+		prefixeHttpMethodMap := make(map[string]httpMethod)
+		for _, prefix := range prefixes {
+			if prefix.Prefix == "" || prefix.Method == "" {
+				continue
+			}
+			prefixeHttpMethodMap[prefix.Prefix] = prefix.Method
+		}
+		g.httpMethodPrefixes = prefixeHttpMethodMap
+	}
+}
+
+// AppendHttpMethodPrefixes append the prefixes.
+func AppendHttpMethodPrefixes(prefixes ...HttpMethod) OptionFun {
+	return func(g *GinEngine) {
+		prefixeHttpMethodMap := g.httpMethodPrefixes
+		if prefixeHttpMethodMap == nil {
+			prefixeHttpMethodMap = make(map[string]httpMethod)
+		}
+		for _, prefix := range prefixes {
+			if prefix.Prefix == "" || prefix.Method == "" {
+				continue
+			}
+			prefixeHttpMethodMap[prefix.Prefix] = prefix.Method
+		}
+		g.httpMethodPrefixes = prefixeHttpMethodMap
 	}
 }
 
 // WithBasePath sets the base path.
-func WithBasePath(basePath string) Option {
+func WithBasePath(basePath string) OptionFun {
 	return func(g *GinEngine) {
 		g.basePath = path.Join("/", basePath)
 	}
 }
 
 // WithDefaultHttpMethod sets the default http method.
-func WithDefaultHttpMethod(method httpMethod) Option {
+func WithDefaultHttpMethod(method httpMethod) OptionFun {
 	return func(g *GinEngine) {
 		g.defaultHttpMethod = method
 	}
 }
 
 // WithRouteNamingRuleFunc 自定义路由命名函数
-func WithRouteNamingRuleFunc(ruleFunc RouteNamingRuleFunc) Option {
+func WithRouteNamingRuleFunc(ruleFunc RouteNamingRuleFunc) OptionFun {
 	return func(g *GinEngine) {
 		g.routeNamingRuleFunc = ruleFunc
 	}
 }
 
 // WithApiConfig sets the title.
-func WithApiConfig(c ApiConfig) Option {
+func WithApiConfig(c ApiConfig) OptionFun {
 	return func(g *GinEngine) {
 		g.apiConfig = c
 	}

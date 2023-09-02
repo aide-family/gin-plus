@@ -97,12 +97,24 @@ func (l *Slice) GetInfo() gin.HandlerFunc {
 
 func TestNew(t *testing.T) {
 	r := gin.Default()
-	opts := []Option{
+	opts := []OptionFun{
 		WithMiddlewares(func(ctx *gin.Context) {
 			log.Println("main middleware")
 		}),
 		WithBasePath("aide-cloud"),
-		WithHttpMethodPrefixes(Get, Post, Put),
+		WithHttpMethodPrefixes(HttpMethod{
+			Prefix: "Get",
+			Method: Get,
+		}, HttpMethod{
+			Prefix: "Post",
+			Method: Post,
+		}, HttpMethod{
+			Prefix: "Put",
+			Method: Put,
+		}, HttpMethod{
+			Prefix: "Delete",
+			Method: Delete,
+		}),
 		WithControllers(&People{
 			Img: &Img{
 				File: &File{},
@@ -149,7 +161,7 @@ func (l *MyController) GetInfo(ctx context.Context, req MyControllerReq) (*MyCon
 
 func TestGenApi(t *testing.T) {
 	r := gin.Default()
-	opts := []Option{
+	opts := []OptionFun{
 		WithBasePath("aide-cloud"),
 		WithControllers(&MyController{}),
 		WithDefaultHttpMethod(Post),
@@ -160,7 +172,7 @@ func TestGenApi(t *testing.T) {
 
 func TestGenApiRun(t *testing.T) {
 	r := gin.Default()
-	opts := []Option{
+	opts := []OptionFun{
 		WithBasePath("aide-cloud"),
 		WithControllers(&MyController{}),
 		WithDefaultHttpMethod(Post),
@@ -225,7 +237,7 @@ var _ Middlewarer = (*ChildMiddController)(nil)
 
 func TestGenApiRunMidd(t *testing.T) {
 	r := gin.Default()
-	opts := []Option{
+	opts := []OptionFun{
 		WithBasePath("aide-cloud"),
 		WithControllers(&MiddController{
 			ChildMiddController: &ChildMiddController{},
