@@ -73,25 +73,40 @@ type (
 	}
 )
 
+const (
+	get    = "Get"
+	post   = "Post"
+	put    = "Put"
+	del    = "Delete"
+	patch  = "Patch"
+	head   = "Head"
+	option = "Option"
+)
+
+const (
+	defaultTitle  = "github.com/aide-cloud/gin-plus"
+	defaultVrsion = "v0.1.2"
+)
+
 var (
-	Get    = httpMethod{key: "Get"}
-	Post   = httpMethod{key: "Post"}
-	Put    = httpMethod{key: "Put"}
-	Delete = httpMethod{key: "Delete"}
-	Patch  = httpMethod{key: "Patch"}
-	Head   = httpMethod{key: "Head"}
-	Option = httpMethod{key: "Option"}
+	Get    = httpMethod{key: get}
+	Post   = httpMethod{key: post}
+	Put    = httpMethod{key: put}
+	Delete = httpMethod{key: del}
+	Patch  = httpMethod{key: patch}
+	Head   = httpMethod{key: head}
+	Option = httpMethod{key: option}
 )
 
 // defaultPrefixes is the default prefixes.
 var defaultPrefixes = map[string]httpMethod{
-	"Get":    Get,
-	"Post":   Post,
-	"Put":    Put,
-	"Delete": Delete,
-	"Patch":  Patch,
-	"Head":   Head,
-	"Option": Option,
+	get:    Get,
+	post:   Post,
+	put:    Put,
+	del:    Delete,
+	patch:  Patch,
+	head:   Head,
+	option: Option,
 }
 
 // New returns a GinEngine instance.
@@ -105,8 +120,8 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		apiRoutes:           make(map[string][]ApiRoute),
 		genApiEnable:        true,
 		apiConfig: ApiConfig{
-			Title:   "aide-cloud-api",
-			Version: "v1",
+			Title:   defaultTitle,
+			Version: defaultVrsion,
 		},
 	}
 	for _, opt := range opts {

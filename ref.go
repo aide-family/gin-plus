@@ -2,6 +2,7 @@ package ginplus
 
 import (
 	"reflect"
+	"strings"
 )
 
 type (
@@ -74,7 +75,8 @@ func getTag(t reflect.Type) []FieldInfo {
 			case "desc":
 				tagInfo.Desc = tagVal
 			default:
-				tagInfo.JsonKey = tagVal
+				valList := strings.Split(tagVal, ",")
+				tagInfo.JsonKey = valList[0]
 			}
 		}
 

@@ -13,7 +13,7 @@ type (
 	}
 
 	ApiDetailReq struct {
-		Id uint `uri:"id"`
+		Id uint `uri:"id" desc:"数据自增唯一ID"`
 	}
 
 	ApiDetailResp struct {
