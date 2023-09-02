@@ -32,10 +32,16 @@ type (
 		List  []*ApiInfoItem `json:"list"`
 	}
 
+	Extent struct {
+		A `json:"a"`
+		B `json:"b"`
+	}
+
 	ApiInfoItem struct {
 		Name   string `json:"name"`
 		Id     uint   `json:"id"`
 		Remark string `json:"remark"`
+		Extent Extent `json:"extent"`
 	}
 
 	ApiUpdateReq struct {

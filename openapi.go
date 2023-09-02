@@ -1,6 +1,9 @@
 package ginplus
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/spf13/viper"
 )
 
@@ -12,12 +15,18 @@ type (
 		Version string `yaml:"version,omitempty"`
 	}
 
+	Properties struct {
+		Properties map[string]SchemaInfo `yaml:"properties,omitempty"`
+		Type       string                `yaml:"type,omitempty"`
+	}
+
 	SchemaInfo struct {
 		Type        string                `yaml:"type,omitempty"`
 		Title       string                `yaml:"title,omitempty"`
 		Format      string                `yaml:"format,omitempty"`
 		Description string                `yaml:"description,omitempty"`
 		Properties  map[string]SchemaInfo `yaml:"properties,omitempty"`
+		Items       Properties            `yaml:"items,omitempty"`
 	}
 
 	Schema struct {
@@ -160,13 +169,24 @@ func genProperties(fieldList []FieldInfo) map[string]SchemaInfo {
 		if jsonKey == "-" || jsonKey == "" {
 			continue
 		}
-		resp[info.Tags.JsonKey] = SchemaInfo{
-			Type:        getTypeMap(info.Type),
+		fieldType := getTypeMap(info.Type)
+
+		schema := SchemaInfo{
+			Type:        fieldType,
 			Title:       info.Tags.Title,
 			Format:      info.Tags.Format,
 			Description: info.Tags.Desc,
-			Properties:  nil, // TODO 暂时不处理结构体嵌套
 		}
+
+		switch fieldType {
+		case "object":
+			schema.Properties = genProperties(info.Info)
+		case "array":
+			schema.Items.Properties = genProperties(info.Info)
+			schema.Items.Type = getTypeMap(info.ChildType)
+		}
+
+		resp[info.Tags.JsonKey] = schema
 	}
 
 	return resp
@@ -175,15 +195,17 @@ func genProperties(fieldList []FieldInfo) map[string]SchemaInfo {
 // "array", "boolean", "integer", "null", "number", "object", "string"
 func getTypeMap(typeStr string) string {
 	switch typeStr {
-	case "int", "int8", "int16", "uint":
+	case "int", "int8", "int16", "int132", "int64", "uint", "uint8", "uint16", "uint132", "uint64":
 		return "integer"
-	case "float32", "float64":
+	case "float32", "float64", "ufloat32", "ufloat64":
 		return "number"
-	case "boolean", "string":
+	case "boolean", "string", "array":
 		return typeStr
-	case "slice":
-		return "array"
 	default:
+		if strings.HasPrefix(typeStr, "[]") {
+			fmt.Println("typeStr: ", typeStr)
+			return "array"
+		}
 		return "object"
 	}
 }

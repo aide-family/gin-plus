@@ -11,9 +11,11 @@ type (
 	}
 
 	FieldInfo struct {
-		Type string
-		Name string
-		Tags Tag
+		Type      string
+		Name      string
+		Tags      Tag
+		ChildType string
+		Info      []FieldInfo
 	}
 
 	Tag struct {
@@ -35,6 +37,13 @@ func getTag(t reflect.Type) []FieldInfo {
 		tmp = tmp.Elem()
 	}
 
+	if tmp.Kind() == reflect.Slice {
+		tmp = tmp.Elem()
+		for tmp.Kind() == reflect.Ptr {
+			tmp = tmp.Elem()
+		}
+	}
+
 	if tmp.Kind() != reflect.Struct {
 		return nil
 	}
@@ -44,11 +53,6 @@ func getTag(t reflect.Type) []FieldInfo {
 		field := tmp.Field(i)
 		fieldName := field.Name
 		fieldType := field.Type.String()
-
-		if field.Type.Kind() == reflect.Struct || field.Type.Kind() == reflect.Slice {
-
-		}
-
 		tagInfo := Tag{
 			Title: fieldName,
 		}
@@ -74,10 +78,20 @@ func getTag(t reflect.Type) []FieldInfo {
 			}
 		}
 
+		childType := field.Type
+		if childType.Kind() == reflect.Slice {
+			childType = childType.Elem()
+			for childType.Kind() == reflect.Ptr {
+				childType = childType.Elem()
+			}
+		}
+
 		fieldList = append(fieldList, FieldInfo{
-			Type: fieldType,
-			Name: fieldName,
-			Tags: tagInfo,
+			Type:      fieldType,
+			Name:      fieldName,
+			Tags:      tagInfo,
+			ChildType: childType.String(),
+			Info:      getTag(childType),
 		})
 	}
 
