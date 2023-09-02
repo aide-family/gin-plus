@@ -68,13 +68,17 @@ type (
 )
 
 func (l *GinEngine) genOpenApiYaml() {
-	viper.SetConfigFile(defaultOpenApiYaml)
+	apiYaml := defaultOpenApiYaml
+	if l.defaultOpenApiYaml != "" && strings.HasSuffix(l.defaultOpenApiYaml, ".yaml") {
+		apiYaml = l.defaultOpenApiYaml
+	}
+	viper.SetConfigFile(apiYaml)
 	viper.SetConfigPermissions(0644)
 	viper.SetConfigType("yaml")
-	viper.Set("openapi", l.apiConfig.Openapi)
+	viper.Set("openapi", "3.0.3")
 	viper.Set("info", Info{
-		Title:   l.apiConfig.Info.Title,
-		Version: l.apiConfig.Info.Version,
+		Title:   l.apiConfig.Title,
+		Version: l.apiConfig.Version,
 	})
 	viper.Set("paths", l.apiToYamlModel())
 

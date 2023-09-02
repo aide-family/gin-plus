@@ -2,6 +2,7 @@ package ginplus
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -24,15 +25,15 @@ type (
 		routeNamingRuleFunc func(methodName string) string
 
 		// 文档配置
-		apiConfig ApiConfig
-		apiRoutes map[string][]ApiRoute
+		apiConfig          ApiConfig
+		defaultOpenApiYaml string
+		apiRoutes          map[string][]ApiRoute
+
+		// 生成API路由开关, 默认为true
+		genApiEnable bool
 	}
 
-	ApiConfig struct {
-		Openapi      string
-		Info         Info
-		GenApiEnable bool
-	}
+	ApiConfig Info
 
 	RouteNamingRuleFunc func(methodName string) string
 
@@ -99,16 +100,14 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 	instance := &GinEngine{
 		Engine:              r,
 		httpMethodPrefixes:  defaultPrefixes,
+		defaultOpenApiYaml:  defaultOpenApiYaml,
 		defaultHttpMethod:   Get,
 		routeNamingRuleFunc: routeToCamel,
 		apiRoutes:           make(map[string][]ApiRoute),
+		genApiEnable:        true,
 		apiConfig: ApiConfig{
-			Openapi: "3.0.3",
-			Info: Info{
-				Title:   "aide-cloud-api",
-				Version: "v1",
-			},
-			GenApiEnable: true,
+			Title:   "aide-cloud-api",
+			Version: "v1",
 		},
 	}
 	for _, opt := range opts {
@@ -127,18 +126,23 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		instance.Handle(strings.ToUpper(route.HttpMethod), path.Join(instance.basePath, route.Path), route.Handles...)
 	}
 
-	if instance.apiConfig.GenApiEnable {
-		instance.genOpenApiYaml()
-		fp, _ := fs.Sub(swagger.Dist, "dist")
-		r.StaticFS("/swagger-ui", http.FS(fp))
-		instance.GET("/openapi/doc/swagger", func(ctx *gin.Context) {
-			file, _ := os.ReadFile("openapi.yaml")
-			ctx.Writer.Header().Set("Content-Type", "text/yaml; charset=utf-8")
-			_, _ = ctx.Writer.Write(file)
-		})
-	}
+	registerSwaggerUI(instance, instance.genApiEnable)
 
 	return instance
+}
+
+func registerSwaggerUI(instance *GinEngine, enable bool) {
+	if !enable {
+		return
+	}
+	instance.genOpenApiYaml()
+	fp, _ := fs.Sub(swagger.Dist, "dist")
+	instance.StaticFS("/swagger-ui", http.FS(fp))
+	instance.GET("/openapi/doc/swagger", func(ctx *gin.Context) {
+		file, _ := os.ReadFile(instance.defaultOpenApiYaml)
+		ctx.Writer.Header().Set("Content-Type", "text/yaml; charset=utf-8")
+		_, _ = ctx.Writer.Write(file)
+	})
 }
 
 // WithControllers sets the controllers.
@@ -211,5 +215,15 @@ func WithRouteNamingRuleFunc(ruleFunc RouteNamingRuleFunc) OptionFun {
 func WithApiConfig(c ApiConfig) OptionFun {
 	return func(g *GinEngine) {
 		g.apiConfig = c
+	}
+}
+
+// WithOpenApiYaml 自定义api文件存储位置和文件名称
+func WithOpenApiYaml(dir, filename string) OptionFun {
+	return func(g *GinEngine) {
+		if !strings.HasSuffix(filename, ".yaml") {
+			fmt.Printf("[GIN-PLUS] [WARNING] filename has no (.yaml) suffix,  so the default (%s) is used as the filename.\n", defaultOpenApiYaml)
+		}
+		g.defaultOpenApiYaml = path.Join(dir, filename)
 	}
 }

@@ -96,11 +96,17 @@ func (l *Api) DeleteInfo(ctx context.Context, req *DelApiReq) (*DelApiResp, erro
 }
 
 func TestGinEngine_execute(t *testing.T) {
-	New(gin.Default(), WithControllers(&Api{}), AppendHttpMethodPrefixes(HttpMethod{
-		Prefix: "Update",
-		Method: Put,
-	}, HttpMethod{
-		Prefix: "Del",
-		Method: Delete,
-	}))
+	New(gin.Default(),
+		WithControllers(&Api{}),
+		WithOpenApiYaml("./", "openapi.yaml"),
+		AppendHttpMethodPrefixes(
+			HttpMethod{
+				Prefix: "Update",
+				Method: Put,
+			}, HttpMethod{
+				Prefix: "Del",
+				Method: Delete,
+			},
+		),
+	)
 }

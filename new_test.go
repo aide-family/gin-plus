@@ -125,11 +125,8 @@ func TestNew(t *testing.T) {
 			return routeToCamel(methodName)
 		}),
 		WithApiConfig(ApiConfig{
-			Openapi: "3.0.3",
-			Info: Info{
-				Title:   "aide-cloud-api",
-				Version: "v1",
-			},
+			Title:   "aide-cloud-api",
+			Version: "v1",
 		}),
 	}
 	ginInstance := New(r, opts...)
