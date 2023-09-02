@@ -1,7 +1,6 @@
 package ginplus
 
 import (
-	"context"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -65,23 +64,23 @@ type (
 
 	OptionFun func(*GinEngine)
 
-	httpMethod string
+	httpMethod struct {
+		key string
+	}
 	HttpMethod struct {
 		Prefix string
 		Method httpMethod
 	}
-
-	CallBack[Req, Resp any] func(ctx context.Context, req Req) (Resp, error)
 )
 
-const (
-	Get    httpMethod = "Get"
-	Post   httpMethod = "Post"
-	Put    httpMethod = "Put"
-	Delete httpMethod = "Delete"
-	Patch  httpMethod = "Patch"
-	Head   httpMethod = "Head"
-	Option httpMethod = "Option"
+var (
+	Get    = httpMethod{key: "Get"}
+	Post   = httpMethod{key: "Post"}
+	Put    = httpMethod{key: "Put"}
+	Delete = httpMethod{key: "Delete"}
+	Patch  = httpMethod{key: "Patch"}
+	Head   = httpMethod{key: "Head"}
+	Option = httpMethod{key: "Option"}
 )
 
 // defaultPrefixes is the default prefixes.
@@ -164,7 +163,7 @@ func WithHttpMethodPrefixes(prefixes ...HttpMethod) OptionFun {
 	return func(g *GinEngine) {
 		prefixeHttpMethodMap := make(map[string]httpMethod)
 		for _, prefix := range prefixes {
-			if prefix.Prefix == "" || prefix.Method == "" {
+			if prefix.Prefix == "" || prefix.Method.key == "" {
 				continue
 			}
 			prefixeHttpMethodMap[prefix.Prefix] = prefix.Method
@@ -181,7 +180,7 @@ func AppendHttpMethodPrefixes(prefixes ...HttpMethod) OptionFun {
 			prefixeHttpMethodMap = make(map[string]httpMethod)
 		}
 		for _, prefix := range prefixes {
-			if prefix.Prefix == "" || prefix.Method == "" {
+			if prefix.Prefix == "" || prefix.Method.key == "" {
 				continue
 			}
 			prefixeHttpMethodMap[prefix.Prefix] = prefix.Method
