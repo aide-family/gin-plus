@@ -331,3 +331,5 @@ func TestGraphql(t *testing.T) {
 ```
 
 ![img.png](./doc/graphql-run.png)
+
+![img.png](doc/graphql-page.png)
