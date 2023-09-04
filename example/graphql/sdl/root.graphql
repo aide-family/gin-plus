@@ -1,0 +1,43 @@
+schema {
+    query: RootQuery
+    mutation: RootMutation
+}
+
+type RootQuery {
+    ping: String!
+}
+
+type RootMutation {
+    ping: String!
+    add(in: AddInput!): Int!
+    sum(in: SumInput!): Int!
+    sub(in: SubInput!): Int!
+    mul(in: MulInput!): Int!
+    div(in: DivInput!): Int!
+}
+
+input AddInput {
+    a: Int!
+    b: Int!
+}
+
+input SumInput {
+    nums: [Int!]!
+}
+
+input SubInput {
+    a: Int!
+    b: Int!
+}
+
+#  a * b
+input MulInput {
+    a: Int!
+    b: Int!
+}
+
+# a / b
+input DivInput {
+    a: Int!
+    b: Int!
+}
