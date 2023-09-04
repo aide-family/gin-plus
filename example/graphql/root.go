@@ -39,6 +39,9 @@ type (
 		A int32
 		B int32
 	}
+
+	Extend struct {
+	}
 )
 
 func (r *Root) Add(ctx context.Context, args struct {
@@ -76,4 +79,36 @@ func (r *Root) Div(ctx context.Context, args struct {
 		return 0, errors.New("div by zero")
 	}
 	return args.In.A / args.In.B, nil
+}
+
+func (r *Root) CheckUUID(ctx context.Context, args struct {
+	In UUID
+}) (string, error) {
+	return args.In.String(), nil
+}
+
+func (r *Root) Extend(ctx context.Context) *Extend {
+	return &Extend{}
+}
+
+// Info ...
+// request:
+//
+//	{
+//	 extend {
+//	   info
+//	 }
+//	}
+//
+// response:
+//
+//	{
+//	 "data": {
+//	   "extend": {
+//	     "info": "extend info"
+//	   }
+//	 }
+//	}
+func (r *Extend) Info(ctx context.Context) string {
+	return "extend info"
 }

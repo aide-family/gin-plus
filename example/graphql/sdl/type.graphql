@@ -1,0 +1,4 @@
+"""
+This module contains the definition of the UUID scalar.
+"""
+scalar UUID

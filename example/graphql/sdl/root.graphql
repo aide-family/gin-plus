@@ -5,6 +5,11 @@ schema {
 
 type RootQuery {
     ping: String!
+    extend: ExtendQuery
+}
+
+type ExtendQuery {
+    info: String!
 }
 
 type RootMutation {
@@ -14,6 +19,7 @@ type RootMutation {
     sub(in: SubInput!): Int!
     mul(in: MulInput!): Int!
     div(in: DivInput!): Int!
+    checkUUID(in: UUID!): String!
 }
 
 input AddInput {
