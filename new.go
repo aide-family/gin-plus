@@ -1,16 +1,21 @@
 package ginplus
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/aide-cloud/gin-plus/swagger"
 	"github.com/gin-gonic/gin"
 )
+
+var _ Server = (*GinEngine)(nil)
 
 type (
 	GinEngine struct {
@@ -30,6 +35,11 @@ type (
 
 		// 生成API路由开关, 默认为true
 		genApiEnable bool
+
+		// 内置启动地址
+		// 默认为: :8080
+		addr   string
+		server *http.Server
 	}
 
 	ApiConfig Info
@@ -123,6 +133,7 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 			Title:   defaultTitle,
 			Version: defaultVrsion,
 		},
+		addr: ":8080",
 	}
 	for _, opt := range opts {
 		opt(instance)
@@ -143,6 +154,41 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 	registerSwaggerUI(instance, instance.genApiEnable)
 
 	return instance
+}
+
+func (l *GinEngine) Start() error {
+	if l.server == nil {
+		//创建HTTP服务器
+		server := &http.Server{
+			Addr:    l.addr,
+			Handler: l.Engine,
+		}
+		l.server = server
+	}
+
+	//启动HTTP服务器
+	go func() {
+		if err := l.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("[GIN-PLUS] [INFO] Server listen: %s\n", err)
+		}
+	}()
+
+	log.Println("[GIN-PLUS] [INFO] Server is running at", l.addr)
+
+	return nil
+}
+
+func (l *GinEngine) Stop() {
+	//创建超时上下文，Shutdown可以让未处理的连接在这个时间内关闭
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	//停止HTTP服务器
+	if err := l.server.Shutdown(ctx); err != nil {
+		log.Fatal("[GIN-PLUS] [INFO] Server Shutdown:", err)
+	}
+
+	log.Println("[GIN-PLUS] [INFO] Server stopped")
 }
 
 func registerSwaggerUI(instance *GinEngine, enable bool) {
@@ -236,8 +282,33 @@ func WithApiConfig(c ApiConfig) OptionFun {
 func WithOpenApiYaml(dir, filename string) OptionFun {
 	return func(g *GinEngine) {
 		if !strings.HasSuffix(filename, ".yaml") {
-			fmt.Printf("[GIN-PLUS] [WARNING] filename has no (.yaml) suffix,  so the default (%s) is used as the filename.\n", defaultOpenApiYaml)
+			log.Printf("[GIN-PLUS] [WARNING] filename has no (.yaml) suffix,  so the default (%s) is used as the filename.\n", defaultOpenApiYaml)
 		}
 		g.defaultOpenApiYaml = path.Join(dir, filename)
+	}
+}
+
+// WithGenApiEnable 设置是否生成API路由
+func WithGenApiEnable(enable bool) OptionFun {
+	return func(g *GinEngine) {
+		g.genApiEnable = enable
+	}
+}
+
+// WithAddr 设置启动地址
+func WithAddr(addr string) OptionFun {
+	return func(g *GinEngine) {
+		g.addr = addr
+	}
+}
+
+// WithHttpServer 设置启动地址
+func WithHttpServer(server *http.Server) OptionFun {
+	return func(g *GinEngine) {
+		server.Handler = g.Engine
+		if server.Addr == "" {
+			server.Addr = g.addr
+		}
+		g.server = server
 	}
 }
