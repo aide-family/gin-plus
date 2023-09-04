@@ -2,6 +2,7 @@ package ginplus
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"io/fs"
 	"log"
@@ -40,6 +41,9 @@ type (
 		// 默认为: :8080
 		addr   string
 		server *http.Server
+
+		// graphql配置
+		graphqlConfig GraphqlConfig
 	}
 
 	ApiConfig Info
@@ -80,6 +84,19 @@ type (
 	HttpMethod struct {
 		Prefix string
 		Method httpMethod
+	}
+
+	GraphqlConfig struct {
+		// Enable 是否启用
+		Enable bool
+		// HandlePath graphql请求路径
+		HandlePath string
+		// SchemaPath graphql schema文件路径
+		ViewPath string
+		// Root graphql 服务根节点
+		Root any
+		// Content graphql schema文件内容
+		Content embed.FS
 	}
 )
 
@@ -153,6 +170,9 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 
 	registerSwaggerUI(instance, instance.genApiEnable)
 
+	// graphql
+	registerGraphql(instance, instance.graphqlConfig)
+
 	return instance
 }
 
@@ -203,6 +223,20 @@ func registerSwaggerUI(instance *GinEngine, enable bool) {
 		ctx.Writer.Header().Set("Content-Type", "text/yaml; charset=utf-8")
 		_, _ = ctx.Writer.Write(file)
 	})
+}
+
+func registerGraphql(instance *GinEngine, config GraphqlConfig) {
+	if !config.Enable || config.Root == nil {
+		return
+	}
+	if config.HandlePath == "" {
+		config.HandlePath = DefaultHandlePath
+	}
+	if config.ViewPath == "" {
+		config.ViewPath = DefaultViewPath
+	}
+	instance.POST(config.HandlePath, gin.WrapH(Handler(config.Root, config.Content)))
+	instance.GET(config.ViewPath, gin.WrapF(View(config.HandlePath)))
 }
 
 // WithControllers sets the controllers.
@@ -310,5 +344,12 @@ func WithHttpServer(server *http.Server) OptionFun {
 			server.Addr = g.addr
 		}
 		g.server = server
+	}
+}
+
+// WithGraphqlConfig 设置graphql配置
+func WithGraphqlConfig(config GraphqlConfig) OptionFun {
+	return func(g *GinEngine) {
+		g.graphqlConfig = config
 	}
 }

@@ -1,0 +1,12 @@
+schema {
+    query: RootQuery
+    mutation: RootMutation
+}
+
+type RootQuery {
+    ping: String!
+}
+
+type RootMutation {
+    ping: String!
+}
