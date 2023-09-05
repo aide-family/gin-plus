@@ -84,3 +84,8 @@ func Test_isCallBack(t *testing.T) {
 
 	t.Log(req, resp)
 }
+
+func TestGinEngine_parseRoute(t *testing.T) {
+	instance := New(gin.Default())
+	t.Log(instance.parseRoute("Delete"))
+}

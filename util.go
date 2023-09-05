@@ -166,22 +166,21 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 // parseRoute 从方法名称中解析出路由和请求方式
 func (l *GinEngine) parseRoute(methodName string) *Route {
 	method := strings.ToLower(l.defaultHttpMethod.key)
-	p := methodName
+	routePath := strings.ToLower(methodName)
 
 	for prefix, httpMethodKey := range l.httpMethodPrefixes {
-		pre := prefix
-		if strings.HasPrefix(methodName, pre) {
+		if strings.HasPrefix(methodName, prefix) {
 			method = strings.ToLower(httpMethodKey.key)
-			p = strings.TrimPrefix(methodName, pre)
-			if p == "" {
-				p = method
+			p := strings.TrimPrefix(methodName, prefix)
+			if p != "" {
+				routePath = p
 			}
 			break
 		}
 	}
 
 	return &Route{
-		Path:       "/" + l.routeNamingRuleFunc(p),
+		Path:       "/" + l.routeNamingRuleFunc(routePath),
 		HttpMethod: method,
 	}
 }
