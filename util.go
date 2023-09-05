@@ -173,12 +173,11 @@ func (l *GinEngine) parseRoute(methodName string) *Route {
 		if strings.HasPrefix(methodName, pre) {
 			method = strings.ToLower(httpMethodKey.key)
 			p = strings.TrimPrefix(methodName, pre)
+			if p == "" {
+				p = method
+			}
 			break
 		}
-	}
-
-	if p == "" || method == "" {
-		return nil
 	}
 
 	return &Route{
