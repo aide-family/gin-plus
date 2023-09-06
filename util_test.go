@@ -89,3 +89,51 @@ func TestGinEngine_parseRoute(t *testing.T) {
 	instance := New(gin.Default())
 	t.Log(instance.parseRoute("Delete"))
 }
+
+func TestGinEngine_isPublic(t *testing.T) {
+	i := New(gin.Default())
+
+	if !i.isPublic("Abc") {
+		t.Log("Abc is public")
+	}
+
+	if i.isPublic("abc") {
+		t.Log("abc is privite")
+	}
+}
+
+type Pub struct {
+	v1 *V1
+}
+
+type V1 struct {
+}
+
+type PubReq struct {
+}
+
+type PubResp struct {
+}
+
+func (p *Pub) GetPingA(ctx context.Context, req *PubReq) (*PubResp, error) {
+	return nil, nil
+}
+
+func (p *Pub) getPingB(ctx context.Context, req *PubReq) (*PubResp, error) {
+	return nil, nil
+}
+
+func (p *V1) GetList(ctx context.Context, req *PubReq) (*PubResp, error) {
+	return nil, nil
+}
+
+func TestPriviteMethod(t *testing.T) {
+	New(gin.Default(), WithControllers(&Pub{
+		v1: &V1{},
+	}), AppendHttpMethodPrefixes(
+		HttpMethod{
+			Prefix: "get",
+			Method: httpMethod{get},
+		},
+	))
+}

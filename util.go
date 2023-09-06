@@ -59,6 +59,10 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 		tmp = t.Elem()
 	}
 
+	if !l.isPublic(tmp.Name()) {
+		return nil
+	}
+
 	var middlewares []gin.HandlerFunc
 	midd, isMidd := isMiddlewarer(controller)
 	if isMidd {
@@ -81,6 +85,9 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 	if !skipAnonymous {
 		for i := 0; i < t.NumMethod(); i++ {
 			metheodName := t.Method(i).Name
+			if !l.isPublic(metheodName) {
+				continue
+			}
 			privateMidd := methoderMiddlewaresMap[metheodName]
 			route := l.parseRoute(metheodName)
 			if route == nil {
@@ -154,6 +161,10 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 				continue
 			}
 
+			if !l.isPublic(field.Name) {
+				continue
+			}
+
 			// new一个新的controller
 			newController := reflect.New(field.Type).Interface()
 			routes = append(routes, l.genRoute(basePath, newController, middlewares, field.Anonymous)...)
@@ -163,20 +174,38 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 	return routes
 }
 
+// isPublic 判断是否为公共方法
+func (l *GinEngine) isPublic(name string) bool {
+	if len(name) == 0 {
+		return false
+	}
+
+	first := name[0]
+	if first < 'A' || first > 'Z' {
+		return false
+	}
+
+	return true
+}
+
 // parseRoute 从方法名称中解析出路由和请求方式
 func (l *GinEngine) parseRoute(methodName string) *Route {
-	method := strings.ToLower(l.defaultHttpMethod.key)
-	routePath := strings.ToLower(methodName)
+	method := ""
+	routePath := ""
 
 	for prefix, httpMethodKey := range l.httpMethodPrefixes {
 		if strings.HasPrefix(methodName, prefix) {
 			method = strings.ToLower(httpMethodKey.key)
 			p := strings.TrimPrefix(methodName, prefix)
 			if p != "" {
-				routePath = p
+				routePath = strings.ToLower(p)
 			}
 			break
 		}
+	}
+
+	if method == "" || routePath == "" {
+		return nil
 	}
 
 	return &Route{
