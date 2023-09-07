@@ -59,33 +59,41 @@ type (
 		ping gin.HandlerFunc
 	}
 
+	// Metrics prometheus metrics配置
 	Metrics struct {
 		Enable bool
 		Path   string
 	}
 
+	// ApiConfig 文档配置,
 	ApiConfig Info
 
+	// RouteNamingRuleFunc 自定义路由命名函数
 	RouteNamingRuleFunc func(methodName string) string
 
+	// Middlewarer 中间件接口, 实现该接口的结构体将会被把中间件添加到该路由组的公共中间件中
 	Middlewarer interface {
 		Middlewares() []gin.HandlerFunc
 	}
 
+	// MethoderMiddlewarer 中间件接口, 为每个方法添加中间件
 	MethoderMiddlewarer interface {
 		MethoderMiddlewares() map[string][]gin.HandlerFunc
 	}
 
+	// Controller 控制器接口, 实现该接口的对象可以自定义模块的路由
 	Controller interface {
 		BasePath() string
 	}
 
+	// Route 路由参数结构
 	Route struct {
 		Path       string
 		HttpMethod string
 		Handles    []gin.HandlerFunc
 	}
 
+	// ApiRoute api路由参数结构, 用于生成文档
 	ApiRoute struct {
 		Path       string
 		HttpMethod string
@@ -94,16 +102,20 @@ type (
 		RespParams Field
 	}
 
+	// OptionFun GinEngine配置函数
 	OptionFun func(*GinEngine)
 
+	// httpMethod http请求方法
 	httpMethod struct {
 		key string
 	}
+	// HttpMethod http请求方法, 绑定前缀和http请求方法的映射
 	HttpMethod struct {
 		Prefix string
 		Method httpMethod
 	}
 
+	// GraphqlConfig graphql配置
 	GraphqlConfig struct {
 		// Enable 是否启用
 		Enable bool
@@ -156,7 +168,7 @@ var defaultPrefixes = map[string]httpMethod{
 	option: Option,
 }
 
-// New returns a GinEngine instance.
+// New 返回一个GinEngine实例
 func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 	instance := &GinEngine{
 		Engine:              r,
@@ -187,7 +199,10 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		instance.genRoute(nil, c, false)
 	}
 
-	registerSwaggerUI(instance, instance.genApiEnable)
+	if len(instance.controllers) > 0 {
+		// swagger ui
+		registerSwaggerUI(instance, instance.genApiEnable)
+	}
 
 	// graphql
 	registerGraphql(instance, instance.graphqlConfig)

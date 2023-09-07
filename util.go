@@ -55,7 +55,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 
 	tmp := t
 	for tmp.Kind() == reflect.Ptr {
-		tmp = t.Elem()
+		tmp = tmp.Elem()
 	}
 
 	if !l.isPublic(tmp.Name()) {
@@ -95,6 +95,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 			privateMidd := methoderMiddlewaresMap[metheodName]
 			route := l.parseRoute(metheodName)
 			if route == nil {
+				panic(fmt.Sprintf("method name: %v is not a valid route", route))
 				continue
 			}
 			route.Path = path.Join(route.Path)
@@ -196,9 +197,9 @@ func (l *GinEngine) parseRoute(methodName string) *Route {
 	for prefix, httpMethodKey := range l.httpMethodPrefixes {
 		if strings.HasPrefix(methodName, prefix) {
 			method = strings.ToLower(httpMethodKey.key)
-			p := strings.TrimPrefix(methodName, prefix)
-			if p != "" {
-				routePath = strings.ToLower(p)
+			routePath = strings.TrimPrefix(methodName, prefix)
+			if routePath == "" {
+				routePath = method
 			}
 			break
 		}
@@ -209,7 +210,7 @@ func (l *GinEngine) parseRoute(methodName string) *Route {
 	}
 
 	return &Route{
-		Path:       "/" + l.routeNamingRuleFunc(routePath),
+		Path:       path.Join("/", l.routeNamingRuleFunc(routePath)),
 		HttpMethod: method,
 	}
 }

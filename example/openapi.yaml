@@ -1,11 +1,11 @@
 info:
-    title: aide-cloud-api
-    version: v1
+    title: github.com/aide-cloud/gin-plus
+    version: v0.1.6
 openapi: 3.0.3
 paths:
-    /api/detail/:id:
+    /info/:id:
         get:
-            operationId: GetDetail
+            operationId: GetInfo
             responses:
                 200:
                     description: ""
@@ -20,9 +20,6 @@ paths:
                                     name:
                                         type: string
                                         title: Name
-                                    remark:
-                                        type: string
-                                        title: Remark
             parameters:
                 - name: id
                   in: path
@@ -30,105 +27,97 @@ paths:
                   schema:
                     type: integer
                     title: Id
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-    /api/info/:id:
-        delete:
-            operationId: DeleteInfo
-            responses:
-                200:
-                    description: ""
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    id:
-                                        type: integer
-                                        title: Id
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: integer
-                    title: Id
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-    /api/list:
-        get:
-            operationId: GetList
-            responses:
-                200:
-                    description: ""
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    list:
-                                        type: object
-                                        title: List
-                                    total:
-                                        type: object
-                                        title: Total
-            parameters:
-                - name: current
-                  in: query
-                  schema:
-                    type: integer
-                    title: Current
-                - name: size
-                  in: query
-                  schema:
-                    type: integer
-                    title: Size
-                - name: keyworld
+                - name: name
                   in: query
                   schema:
                     type: string
-                    title: Keryworld
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-    /api/updateInfo/:id:
-        get:
-            operationId: UpdateInfo
-            responses:
-                200:
-                    description: ""
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    id:
-                                        type: integer
-                                        title: Id
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                    type: integer
-                    title: Id
+                    title: Name
             requestBody:
                 content:
                     application/json:
                         schema:
                             type: object
                             properties:
-                                name:
-                                    type: string
-                                    title: Name
-                                remark:
-                                    type: string
-                                    title: Remark
+                                data:
+                                    type: array
+                                    title: Data
+                                    items:
+                                        type: object
+        post:
+            operationId: PostInfo
+            responses:
+                200:
+                    description: ""
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        title: Id
+                                    name:
+                                        type: string
+                                        title: Name
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    title: Id
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                    title: Name
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                data:
+                                    type: array
+                                    title: Data
+                                    items:
+                                        type: object
+        put:
+            operationId: PutInfo
+            responses:
+                200:
+                    description: ""
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        title: Id
+                                    name:
+                                        type: string
+                                        title: Name
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    title: Id
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+                    title: Name
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                data:
+                                    type: array
+                                    title: Data
+                                    items:
+                                        type: object
