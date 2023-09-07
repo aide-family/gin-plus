@@ -50,9 +50,8 @@ func isCallBack(t reflect.Type) (reflect.Type, reflect.Type, bool) {
 	return req, resp, true
 }
 
-func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerFunc, skipAnonymous bool) []*Route {
+func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipAnonymous bool) {
 	t := reflect.TypeOf(controller)
-	var routes []*Route
 
 	tmp := t
 	for tmp.Kind() == reflect.Ptr {
@@ -60,7 +59,7 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 	}
 
 	if !l.isPublic(tmp.Name()) {
-		return nil
+		return
 	}
 
 	var middlewares []gin.HandlerFunc
@@ -70,11 +69,16 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 		middlewares = midd.Middlewares()
 	}
 
-	basePath := path.Join(p, l.routeNamingRuleFunc(tmp.Name()))
+	basePath := l.routeNamingRuleFunc(tmp.Name())
 	ctrl, isCtrl := isController(controller)
 	if isCtrl {
 		basePath = ctrl.BasePath()
 	}
+	parentRouteGroup := parentGroup
+	if parentRouteGroup == nil {
+		parentRouteGroup = l.Group("/")
+	}
+	routeGroup := parentRouteGroup.Group(path.Join(basePath), middlewares...)
 
 	methoderMiddlewaresMap := make(map[string][]gin.HandlerFunc)
 	methoderMidd, privateMiddOk := isMethoderMiddlewarer(controller)
@@ -93,18 +97,15 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 			if route == nil {
 				continue
 			}
-			route.Path = path.Join(basePath, route.Path)
-			// 父级公共中间件
-			route.Handles = append(route.Handles, parentMidd...)
-			// 组下公共中间件
-			route.Handles = append(route.Handles, middlewares...)
+			route.Path = path.Join(route.Path)
 			// 接口私有中间件
 			route.Handles = append(route.Handles, privateMidd...)
 
 			if isHandlerFunc(t.Method(i).Type) {
 				// 具体的action
-				route.Handles = append(route.Handles, t.Method(i).Func.Call([]reflect.Value{reflect.ValueOf(controller)})[0].Interface().(gin.HandlerFunc))
-				routes = append(routes, route)
+				handleFunc := t.Method(i).Func.Call([]reflect.Value{reflect.ValueOf(controller)})[0].Interface().(gin.HandlerFunc)
+				route.Handles = append(route.Handles, handleFunc)
+				routeGroup.Handle(strings.ToUpper(route.HttpMethod), route.Path, route.Handles...)
 				continue
 			}
 
@@ -143,8 +144,9 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 				l.apiRoutes[route.Path] = append(l.apiRoutes[route.Path], apiRoute)
 
 				// 具体的action
-				route.Handles = append(route.Handles, newDefaultHandler(controller, t.Method(i), req))
-				routes = append(routes, route)
+				handleFunc := l.defaultHandler(controller, t.Method(i), req)
+				route.Handles = append(route.Handles, handleFunc)
+				routeGroup.Handle(strings.ToUpper(route.HttpMethod), route.Path, route.Handles...)
 				continue
 			}
 		}
@@ -167,11 +169,9 @@ func (l *GinEngine) genRoute(p string, controller any, parentMidd []gin.HandlerF
 
 			// new一个新的controller
 			newController := reflect.New(field.Type).Interface()
-			routes = append(routes, l.genRoute(basePath, newController, middlewares, field.Anonymous)...)
+			l.genRoute(routeGroup, newController, field.Anonymous)
 		}
 	}
-
-	return routes
 }
 
 // isPublic 判断是否为公共方法

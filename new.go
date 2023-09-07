@@ -9,14 +9,18 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/aide-cloud/gin-plus/swagger"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var _ Server = (*GinEngine)(nil)
+
+type HandlerFunc func(controller any, t reflect.Method, req reflect.Type) gin.HandlerFunc
 
 type (
 	GinEngine struct {
@@ -28,6 +32,10 @@ type (
 		defaultHttpMethod  httpMethod
 		// 自定义路由命名规则函数
 		routeNamingRuleFunc func(methodName string) string
+		// 自定义handler函数
+		defaultHandler HandlerFunc
+		// 自定义Response接口实现
+		defaultResponse IResponser
 
 		// 文档配置
 		apiConfig          ApiConfig
@@ -44,6 +52,16 @@ type (
 
 		// graphql配置
 		graphqlConfig GraphqlConfig
+
+		// prom metrics
+		metrics *Metrics
+		// ping
+		ping gin.HandlerFunc
+	}
+
+	Metrics struct {
+		Enable bool
+		Path   string
 	}
 
 	ApiConfig Info
@@ -111,8 +129,10 @@ const (
 )
 
 const (
-	defaultTitle  = "github.com/aide-cloud/gin-plus"
-	defaultVrsion = "v0.1.2"
+	defaultTitle       = "github.com/aide-cloud/gin-plus"
+	defaultVrsion      = "v0.1.6"
+	defaultMetricsPath = "/metrics"
+	defaultPingPath    = "/ping"
 )
 
 var (
@@ -143,6 +163,7 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		httpMethodPrefixes:  defaultPrefixes,
 		defaultOpenApiYaml:  defaultOpenApiYaml,
 		defaultHttpMethod:   Get,
+		defaultResponse:     NewResponse(),
 		routeNamingRuleFunc: routeToCamel,
 		apiRoutes:           make(map[string][]ApiRoute),
 		genApiEnable:        true,
@@ -156,22 +177,24 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		opt(instance)
 	}
 
-	instance.Use(instance.middlewares...)
-
-	routes := make([]*Route, 0)
-	basePath := "/"
-	for _, c := range instance.controllers {
-		routes = append(routes, instance.genRoute(basePath, c, nil, false)...)
+	if instance.defaultHandler == nil {
+		instance.defaultHandler = instance.newDefaultHandler
 	}
 
-	for _, route := range routes {
-		instance.Handle(strings.ToUpper(route.HttpMethod), path.Join(instance.basePath, route.Path), route.Handles...)
+	instance.Use(instance.middlewares...)
+
+	for _, c := range instance.controllers {
+		instance.genRoute(nil, c, false)
 	}
 
 	registerSwaggerUI(instance, instance.genApiEnable)
 
 	// graphql
 	registerGraphql(instance, instance.graphqlConfig)
+	// metrics
+	registerMetrics(instance, instance.metrics)
+	// ping
+	registerPing(instance, instance.ping)
 
 	return instance
 }
@@ -209,6 +232,26 @@ func (l *GinEngine) Stop() {
 	}
 
 	log.Println("[GIN-PLUS] [INFO] Server stopped")
+}
+
+func registerPing(instance *GinEngine, pingHandler gin.HandlerFunc) {
+	if pingHandler != nil {
+		instance.GET(defaultPingPath, pingHandler)
+		return
+	}
+	instance.GET(defaultPingPath, func(ctx *gin.Context) {
+		ctx.Status(http.StatusOK)
+	})
+}
+
+func registerMetrics(instance *GinEngine, metrics *Metrics) {
+	if metrics == nil || !metrics.Enable {
+		return
+	}
+	if metrics.Path == "" {
+		metrics.Path = defaultMetricsPath
+	}
+	instance.GET(metrics.Path, gin.WrapH(promhttp.Handler()))
 }
 
 func registerSwaggerUI(instance *GinEngine, enable bool) {
@@ -351,5 +394,33 @@ func WithHttpServer(server *http.Server) OptionFun {
 func WithGraphqlConfig(config GraphqlConfig) OptionFun {
 	return func(g *GinEngine) {
 		g.graphqlConfig = config
+	}
+}
+
+// WithDefaultHandler 自定义handler函数
+func WithDefaultHandler(handler HandlerFunc) OptionFun {
+	return func(g *GinEngine) {
+		g.defaultHandler = handler
+	}
+}
+
+// WithDefaultResponse 自定义Response接口实现
+func WithDefaultResponse(response IResponser) OptionFun {
+	return func(g *GinEngine) {
+		g.defaultResponse = response
+	}
+}
+
+// WithMetrics 自定义Metrics
+func WithMetrics(metrics *Metrics) OptionFun {
+	return func(g *GinEngine) {
+		g.metrics = metrics
+	}
+}
+
+// WithPing 自定义Ping
+func WithPing(ping gin.HandlerFunc) OptionFun {
+	return func(g *GinEngine) {
+		g.ping = ping
 	}
 }

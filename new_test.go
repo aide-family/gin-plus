@@ -223,7 +223,7 @@ func (l *MiddController) Middlewares() []gin.HandlerFunc {
 	}
 }
 
-func (l *MiddController) Parent() gin.HandlerFunc {
+func (l *MiddController) GetParent() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		log.Println("Parent action")
 	}
@@ -243,4 +243,92 @@ func TestGenApiRunMidd(t *testing.T) {
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.Run()
+}
+
+type (
+	Path1 struct {
+		Path2 *Path2
+	}
+	Path2 struct {
+	}
+)
+
+func (p *Path2) MethoderMiddlewares() map[string][]gin.HandlerFunc {
+	return map[string][]gin.HandlerFunc{
+		"GetInfoByID": {
+			func(ctx *gin.Context) {
+				log.Println("Path2 GetInfoByID middleware1")
+			},
+			func(ctx *gin.Context) {
+				log.Println("Path2 GetInfoByID middleware2")
+			},
+		},
+	}
+}
+
+func (p *Path2) Middlewares() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		func(ctx *gin.Context) {
+			log.Println("Path2 Middlewares 1")
+		},
+		func(ctx *gin.Context) {
+			log.Println("Path2 Middlewares 2")
+		},
+	}
+}
+
+func (p *Path1) Middlewares() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		func(ctx *gin.Context) {
+			log.Println("Path1 Middlewares 1")
+		},
+		func(ctx *gin.Context) {
+			log.Println("Path1 Middlewares 2")
+		},
+	}
+}
+
+var _ Middlewarer = (*Path1)(nil)
+var _ Middlewarer = (*Path2)(nil)
+var _ MethoderMiddlewarer = (*Path2)(nil)
+
+func (p *Path1) GetInfo() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		log.Println("Path1 GetInfo")
+	}
+}
+
+func (p *Path1) GetInfoByID(ctx context.Context, req *struct {
+	Id uint `uri:"id"`
+}) (*struct {
+	Id uint `json:"id"`
+}, error) {
+	log.Println("Path1 GetInfoByID")
+	return (*struct {
+		Id uint `json:"id"`
+	})(&struct{ Id uint }{Id: req.Id}), nil
+}
+
+func (p *Path2) GetInfo() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		log.Println("Path2 GetInfo")
+	}
+}
+
+func (p *Path2) GetInfoByID(ctx context.Context, req *struct {
+	Id uint `uri:"id"`
+}) (*struct {
+	Id uint `json:"id"`
+}, error) {
+	log.Println("Path2 GetInfoByID")
+	return (*struct {
+		Id uint `json:"id"`
+	})(&struct{ Id uint }{Id: req.Id}), nil
+}
+
+func TestRouteGroup(t *testing.T) {
+	in := New(gin.Default(), WithControllers(&Path1{Path2: &Path2{}}), WithMetrics(&Metrics{
+		Enable: true,
+	}))
+	in.Run(":8080")
 }
