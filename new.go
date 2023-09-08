@@ -29,7 +29,6 @@ type (
 		controllers        []any
 		httpMethodPrefixes map[string]httpMethod
 		basePath           string
-		defaultHttpMethod  httpMethod
 		// 自定义路由命名规则函数
 		routeNamingRuleFunc func(methodName string) string
 		// 自定义handler函数
@@ -180,7 +179,6 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		Engine:              r,
 		httpMethodPrefixes:  defaultPrefixes,
 		defaultOpenApiYaml:  defaultOpenApiYaml,
-		defaultHttpMethod:   Get,
 		defaultResponse:     NewResponse(),
 		routeNamingRuleFunc: routeToCamel,
 		apiRoutes:           make(map[string][]ApiRoute),
@@ -354,13 +352,6 @@ func AppendHttpMethodPrefixes(prefixes ...HttpMethod) OptionFun {
 func WithBasePath(basePath string) OptionFun {
 	return func(g *GinEngine) {
 		g.basePath = path.Join("/", basePath)
-	}
-}
-
-// WithDefaultHttpMethod sets the default http method.
-func WithDefaultHttpMethod(method httpMethod) OptionFun {
-	return func(g *GinEngine) {
-		g.defaultHttpMethod = method
 	}
 }
 

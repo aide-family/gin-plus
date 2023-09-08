@@ -120,7 +120,6 @@ func TestNew(t *testing.T) {
 				File: &File{},
 			},
 		}, &Slice{}),
-		WithDefaultHttpMethod(Post),
 		WithRouteNamingRuleFunc(func(methodName string) string {
 			return routeToCamel(methodName)
 		}),
@@ -161,7 +160,6 @@ func TestGenApi(t *testing.T) {
 	opts := []OptionFun{
 		WithBasePath("aide-cloud"),
 		WithControllers(&MyController{}),
-		WithDefaultHttpMethod(Post),
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.genOpenApiYaml()
@@ -172,7 +170,6 @@ func TestGenApiRun(t *testing.T) {
 	opts := []OptionFun{
 		WithBasePath("aide-cloud"),
 		WithControllers(&MyController{}),
-		WithDefaultHttpMethod(Post),
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.Run()
@@ -239,7 +236,6 @@ func TestGenApiRunMidd(t *testing.T) {
 		WithControllers(&MiddController{
 			ChildMiddController: &ChildMiddController{},
 		}),
-		WithDefaultHttpMethod(Get),
 	}
 	ginInstance := New(r, opts...)
 	ginInstance.Run()
@@ -327,8 +323,7 @@ func (p *Path2) GetInfoByID(ctx context.Context, req *struct {
 }
 
 func TestRouteGroup(t *testing.T) {
-	in := New(gin.Default(), WithControllers(&Path1{Path2: &Path2{}}), WithMetrics(&Metrics{
+	New(gin.Default(), WithControllers(&Path1{Path2: &Path2{}}), WithMetrics(&Metrics{
 		Enable: true,
-	}))
-	in.Run(":8080")
+	}), WithPing(&Ping{Enable: true}))
 }

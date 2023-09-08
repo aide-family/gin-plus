@@ -95,7 +95,6 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 			privateMidd := methoderMiddlewaresMap[metheodName]
 			route := l.parseRoute(metheodName)
 			if route == nil {
-				panic(fmt.Sprintf("method name: %v is not a valid route", route))
 				continue
 			}
 			route.Path = path.Join(route.Path)
