@@ -3,7 +3,7 @@ module gin-plus-demo
 go 1.21.0
 
 require (
-	github.com/aide-cloud/gin-plus v0.1.6
+	github.com/aide-cloud/gin-plus v0.1.7
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.1.2
 	github.com/graph-gophers/graphql-go v1.5.0
