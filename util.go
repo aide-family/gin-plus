@@ -58,7 +58,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 		tmp = tmp.Elem()
 	}
 
-	if !l.isPublic(tmp.Name()) {
+	if !isPublic(tmp.Name()) {
 		return
 	}
 
@@ -89,7 +89,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 	if !skipAnonymous {
 		for i := 0; i < t.NumMethod(); i++ {
 			metheodName := t.Method(i).Name
-			if !l.isPublic(metheodName) {
+			if !isPublic(metheodName) {
 				continue
 			}
 			privateMidd := methoderMiddlewaresMap[metheodName]
@@ -163,7 +163,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 				continue
 			}
 
-			if !l.isPublic(field.Name) {
+			if !isPublic(field.Name) {
 				continue
 			}
 
@@ -175,7 +175,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 }
 
 // isPublic 判断是否为公共方法
-func (l *GinEngine) isPublic(name string) bool {
+func isPublic(name string) bool {
 	if len(name) == 0 {
 		return false
 	}

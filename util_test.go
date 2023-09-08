@@ -91,13 +91,11 @@ func TestGinEngine_parseRoute(t *testing.T) {
 }
 
 func TestGinEngine_isPublic(t *testing.T) {
-	i := New(gin.Default())
-
-	if !i.isPublic("Abc") {
+	if !isPublic("Abc") {
 		t.Log("Abc is public")
 	}
 
-	if i.isPublic("abc") {
+	if isPublic("abc") {
 		t.Log("abc is privite")
 	}
 }
