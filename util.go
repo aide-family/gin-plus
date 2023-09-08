@@ -92,12 +92,14 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 			if !isPublic(metheodName) {
 				continue
 			}
-			privateMidd := methoderMiddlewaresMap[metheodName]
+
 			route := l.parseRoute(metheodName)
 			if route == nil {
 				continue
 			}
-			route.Path = path.Join(route.Path)
+
+			privateMidd := methoderMiddlewaresMap[metheodName]
+
 			// 接口私有中间件
 			route.Handles = append(route.Handles, privateMidd...)
 
@@ -112,46 +114,63 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 			// 判断是否为CallBack类型
 			req, resp, isCb := isCallBack(t.Method(i).Type)
 			if isCb {
-				reqName := req.Name()
-				respName := resp.Name()
-				reqTagInfo := getTag(req)
-				apiRoute := ApiRoute{
-					Path:       route.Path,
-					HttpMethod: strings.ToLower(route.HttpMethod),
-					MethodName: metheodName,
-					ReqParams: Field{
-						Name: reqName,
-						Info: reqTagInfo,
-					},
-					RespParams: Field{
-						Name: respName,
-						Info: getTag(resp),
-					},
-				}
-
-				// 处理Uri参数
-				for _, tagInfo := range reqTagInfo {
-					uriKey := tagInfo.Tags.UriKey
-					if uriKey != "" && uriKey != "-" {
-						route.Path = path.Join(route.Path, fmt.Sprintf(":%s", uriKey))
-					}
-				}
-				apiRoute.Path = route.Path
-
-				if _, ok := l.apiRoutes[route.Path]; !ok {
-					l.apiRoutes[route.Path] = make([]ApiRoute, 0, 1)
-				}
-				l.apiRoutes[route.Path] = append(l.apiRoutes[route.Path], apiRoute)
-
-				// 具体的action
+				// 生成路由openAPI数据
+				l.genOpenAPI(req, resp, route, metheodName)
+				// 注册路由回调函数
 				handleFunc := l.defaultHandler(controller, t.Method(i), req)
-				route.Handles = append(route.Handles, handleFunc)
-				routeGroup.Handle(strings.ToUpper(route.HttpMethod), route.Path, route.Handles...)
+				l.registerCallhandler(route, routeGroup, handleFunc)
 				continue
 			}
 		}
 	}
 
+	l.genStructRoute(routeGroup, tmp)
+}
+
+// 生成openAPI数据
+func (l *GinEngine) genOpenAPI(req, resp reflect.Type, route *Route, metheodName string) {
+	reqName := req.Name()
+	respName := resp.Name()
+	reqTagInfo := getTag(req)
+	apiRoute := ApiRoute{
+		Path:       route.Path,
+		HttpMethod: strings.ToLower(route.HttpMethod),
+		MethodName: metheodName,
+		ReqParams: Field{
+			Name: reqName,
+			Info: reqTagInfo,
+		},
+		RespParams: Field{
+			Name: respName,
+			Info: getTag(resp),
+		},
+	}
+
+	// 处理Uri参数
+	for _, tagInfo := range reqTagInfo {
+		uriKey := tagInfo.Tags.UriKey
+		if uriKey != "" && uriKey != "-" {
+			route.Path = path.Join(route.Path, fmt.Sprintf(":%s", uriKey))
+		}
+	}
+	apiRoute.Path = route.Path
+
+	if _, ok := l.apiRoutes[route.Path]; !ok {
+		l.apiRoutes[route.Path] = make([]ApiRoute, 0, 1)
+	}
+	l.apiRoutes[route.Path] = append(l.apiRoutes[route.Path], apiRoute)
+}
+
+// registerCallhandler 注册回调函数
+func (l *GinEngine) registerCallhandler(route *Route, routeGroup *gin.RouterGroup, handleFunc gin.HandlerFunc) {
+	// 具体的action
+	route.Handles = append(route.Handles, handleFunc)
+	routeGroup.Handle(strings.ToUpper(route.HttpMethod), route.Path, route.Handles...)
+}
+
+// genStructRoute 递归注册结构体路由
+func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller reflect.Type) {
+	tmp := controller
 	if isStruct(tmp) {
 		// 递归获取内部的controller
 		for i := 0; i < tmp.NumField(); i++ {
@@ -169,7 +188,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 
 			// new一个新的controller
 			newController := reflect.New(field.Type).Interface()
-			l.genRoute(routeGroup, newController, field.Anonymous)
+			l.genRoute(parentGroup, newController, field.Anonymous)
 		}
 	}
 }

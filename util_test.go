@@ -101,16 +101,24 @@ func TestGinEngine_isPublic(t *testing.T) {
 }
 
 type Pub struct {
-	v1 *V1
+	v1  *V1
+	V1x *V1
+	*V1
 }
 
 type V1 struct {
 }
 
 type PubReq struct {
+	EID  string `uri:"eid"`
+	Id   int    `uri:"id"`
+	Name string `json:"name"`
 }
 
 type PubResp struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data any    `json:"data"`
 }
 
 func (p *Pub) GetPingA(ctx context.Context, req *PubReq) (*PubResp, error) {
@@ -134,4 +142,42 @@ func TestPriviteMethod(t *testing.T) {
 			Method: httpMethod{get},
 		},
 	))
+}
+
+func TestGinEngine_genStructRoute(t *testing.T) {
+	New(gin.Default(), WithControllers(&Pub{
+		v1: &V1{},
+	}), AppendHttpMethodPrefixes(
+		HttpMethod{
+			Prefix: "Get",
+			Method: httpMethod{get},
+		},
+	))
+}
+
+type GenRouteV1 struct{}
+type GenRouteV2 struct{}
+type GenRouteApi struct {
+	ApiV1 *GenRouteV1
+	ApiV2 *GenRouteV2
+}
+
+func (g *GenRouteV1) GetPing(ctx context.Context, req *PubReq) (*PubResp, error) {
+	return nil, nil
+}
+func (g *GenRouteV2) PostPing(ctx context.Context, req *PubReq) (*PubResp, error) {
+	return nil, nil
+}
+func (g *GenRouteApi) PutPing(ctx context.Context, req *PubReq) (*PubResp, error) {
+	return nil, nil
+}
+func (g *GenRouteApi) DeletePing(ctx context.Context, req *PubReq) (*PubResp, error) {
+	return nil, nil
+}
+
+func TestGinEngine_genRoute(t *testing.T) {
+	New(gin.Default(), WithControllers(&GenRouteApi{
+		ApiV1: &GenRouteV1{},
+		ApiV2: &GenRouteV2{},
+	}))
 }
