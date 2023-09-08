@@ -56,13 +56,19 @@ type (
 		// prom metrics
 		metrics *Metrics
 		// ping
-		ping gin.HandlerFunc
+		ping *Ping
 	}
 
 	// Metrics prometheus metrics配置
 	Metrics struct {
 		Enable bool
 		Path   string
+	}
+
+	// Ping ping配置
+	Ping struct {
+		Enable      bool
+		HandlerFunc gin.HandlerFunc
 	}
 
 	// ApiConfig 文档配置,
@@ -249,14 +255,16 @@ func (l *GinEngine) Stop() {
 	log.Println("[GIN-PLUS] [INFO] Server stopped")
 }
 
-func registerPing(instance *GinEngine, pingHandler gin.HandlerFunc) {
-	if pingHandler != nil {
-		instance.GET(defaultPingPath, pingHandler)
-		return
+func registerPing(instance *GinEngine, ping *Ping) {
+	if ping != nil && ping.Enable {
+		if ping.HandlerFunc == nil {
+			instance.GET(defaultPingPath, func(ctx *gin.Context) {
+				ctx.Status(http.StatusOK)
+			})
+			return
+		}
+		instance.GET(defaultPingPath, ping.HandlerFunc)
 	}
-	instance.GET(defaultPingPath, func(ctx *gin.Context) {
-		ctx.Status(http.StatusOK)
-	})
 }
 
 func registerMetrics(instance *GinEngine, metrics *Metrics) {
@@ -434,7 +442,7 @@ func WithMetrics(metrics *Metrics) OptionFun {
 }
 
 // WithPing 自定义Ping
-func WithPing(ping gin.HandlerFunc) OptionFun {
+func WithPing(ping *Ping) OptionFun {
 	return func(g *GinEngine) {
 		g.ping = ping
 	}
