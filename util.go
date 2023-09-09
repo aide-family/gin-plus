@@ -225,7 +225,7 @@ func (l *GinEngine) parseRoute(methodName string) *Route {
 			method = strings.ToLower(httpMethodKey.key)
 			routePath = strings.TrimPrefix(methodName, prefix)
 			if routePath == "" {
-				routePath = method
+				routePath = strings.ToLower(methodName)
 			}
 			break
 		}
