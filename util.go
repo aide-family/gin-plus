@@ -50,6 +50,10 @@ func isCallBack(t reflect.Type) (reflect.Type, reflect.Type, bool) {
 	return req, resp, true
 }
 
+func (l *GinEngine) GenRoute(parentGroup *gin.RouterGroup, controller any) {
+	l.genRoute(parentGroup, controller, false)
+}
+
 func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipAnonymous bool) {
 	t := reflect.TypeOf(controller)
 
