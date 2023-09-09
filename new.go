@@ -145,7 +145,7 @@ const (
 
 const (
 	defaultTitle       = "github.com/aide-cloud/gin-plus"
-	defaultVrsion      = "v0.3.0"
+	defaultVrsion      = "v0.3.1"
 	defaultMetricsPath = "/metrics"
 	defaultPingPath    = "/ping"
 )
