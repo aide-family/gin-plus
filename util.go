@@ -50,8 +50,9 @@ func isCallBack(t reflect.Type) (reflect.Type, reflect.Type, bool) {
 	return req, resp, true
 }
 
-func (l *GinEngine) GenRoute(parentGroup *gin.RouterGroup, controller any) {
+func (l *GinEngine) GenRoute(parentGroup *gin.RouterGroup, controller any) *GinEngine {
 	l.genRoute(parentGroup, controller, false)
+	return l
 }
 
 func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipAnonymous bool) {
@@ -119,7 +120,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 			req, resp, isCb := isCallBack(t.Method(i).Type)
 			if isCb {
 				// 生成路由openAPI数据
-				l.genOpenAPI(req, resp, route, metheodName)
+				l.genOpenAPI(routeGroup, req, resp, route, metheodName)
 				// 注册路由回调函数
 				handleFunc := l.defaultHandler(controller, t.Method(i), req)
 				l.registerCallhandler(route, routeGroup, handleFunc)
@@ -132,7 +133,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 }
 
 // 生成openAPI数据
-func (l *GinEngine) genOpenAPI(req, resp reflect.Type, route *Route, metheodName string) {
+func (l *GinEngine) genOpenAPI(group *gin.RouterGroup, req, resp reflect.Type, route *Route, metheodName string) {
 	reqName := req.Name()
 	respName := resp.Name()
 	reqTagInfo := getTag(req)
@@ -153,16 +154,19 @@ func (l *GinEngine) genOpenAPI(req, resp reflect.Type, route *Route, metheodName
 	// 处理Uri参数
 	for _, tagInfo := range reqTagInfo {
 		uriKey := tagInfo.Tags.UriKey
-		if uriKey != "" && uriKey != "-" {
+		skip := tagInfo.Tags.Skip
+		if uriKey != "" && uriKey != "-" && skip != "true" {
 			route.Path = path.Join(route.Path, fmt.Sprintf(":%s", uriKey))
 		}
 	}
-	apiRoute.Path = route.Path
 
-	if _, ok := l.apiRoutes[route.Path]; !ok {
-		l.apiRoutes[route.Path] = make([]ApiRoute, 0, 1)
+	apiPath := path.Join(group.BasePath(), route.Path)
+	apiRoute.Path = apiPath
+
+	if _, ok := l.apiRoutes[apiPath]; !ok {
+		l.apiRoutes[apiPath] = make([]ApiRoute, 0, 1)
 	}
-	l.apiRoutes[route.Path] = append(l.apiRoutes[route.Path], apiRoute)
+	l.apiRoutes[apiPath] = append(l.apiRoutes[apiPath], apiRoute)
 }
 
 // registerCallhandler 注册回调函数

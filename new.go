@@ -60,13 +60,11 @@ type (
 
 	// Metrics prometheus metrics配置
 	Metrics struct {
-		Enable bool
-		Path   string
+		Path string
 	}
 
 	// Ping ping配置
 	Ping struct {
-		Enable      bool
 		HandlerFunc gin.HandlerFunc
 	}
 
@@ -147,7 +145,7 @@ const (
 
 const (
 	defaultTitle       = "github.com/aide-cloud/gin-plus"
-	defaultVrsion      = "v0.1.6"
+	defaultVrsion      = "v0.3.0"
 	defaultMetricsPath = "/metrics"
 	defaultPingPath    = "/ping"
 )
@@ -187,7 +185,11 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 			Title:   defaultTitle,
 			Version: defaultVrsion,
 		},
-		addr: ":8080",
+		ping: &Ping{HandlerFunc: func(ctx *gin.Context) {
+			ctx.Status(http.StatusOK)
+		}},
+		metrics: &Metrics{Path: defaultMetricsPath},
+		addr:    ":8080",
 	}
 	for _, opt := range opts {
 		opt(instance)
@@ -202,18 +204,6 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 	for _, c := range instance.controllers {
 		instance.genRoute(nil, c, false)
 	}
-
-	if len(instance.controllers) > 0 {
-		// swagger ui
-		registerSwaggerUI(instance, instance.genApiEnable)
-	}
-
-	// graphql
-	registerGraphql(instance, instance.graphqlConfig)
-	// metrics
-	registerMetrics(instance, instance.metrics)
-	// ping
-	registerPing(instance, instance.ping)
 
 	return instance
 }
@@ -254,19 +244,14 @@ func (l *GinEngine) Stop() {
 }
 
 func registerPing(instance *GinEngine, ping *Ping) {
-	if ping != nil && ping.Enable {
-		if ping.HandlerFunc == nil {
-			instance.GET(defaultPingPath, func(ctx *gin.Context) {
-				ctx.Status(http.StatusOK)
-			})
-			return
-		}
+	if ping != nil {
 		instance.GET(defaultPingPath, ping.HandlerFunc)
+		return
 	}
 }
 
 func registerMetrics(instance *GinEngine, metrics *Metrics) {
-	if metrics == nil || !metrics.Enable {
+	if metrics == nil {
 		return
 	}
 	if metrics.Path == "" {
@@ -301,6 +286,35 @@ func registerGraphql(instance *GinEngine, config GraphqlConfig) {
 	}
 	instance.POST(config.HandlePath, gin.WrapH(Handler(config.Root, config.Content)))
 	instance.GET(config.ViewPath, gin.WrapF(View(config.HandlePath)))
+}
+
+func (l *GinEngine) RegisterPing(ping ...*Ping) *GinEngine {
+	if len(ping) > 0 {
+		l.ping = ping[0]
+	}
+	registerPing(l, l.ping)
+	return l
+}
+
+func (l *GinEngine) RegisterMetrics(metrics ...*Metrics) *GinEngine {
+	if len(metrics) > 0 {
+		l.metrics = metrics[0]
+	}
+	registerMetrics(l, l.metrics)
+	return l
+}
+
+func (l *GinEngine) RegisterSwaggerUI() *GinEngine {
+	registerSwaggerUI(l, l.genApiEnable)
+	return l
+}
+
+func (l *GinEngine) RegisterGraphql(config ...*GraphqlConfig) *GinEngine {
+	if len(config) > 0 {
+		l.graphqlConfig = *config[0]
+	}
+	registerGraphql(l, l.graphqlConfig)
+	return l
 }
 
 // WithControllers sets the controllers.

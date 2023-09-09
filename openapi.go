@@ -87,6 +87,10 @@ func (l *GinEngine) genOpenApiYaml() {
 	}
 }
 
+func isUri(uriStr string) bool {
+	return uriStr != "" && uriStr != "-"
+}
+
 func (l *GinEngine) apiToYamlModel() Path {
 	apiReoutes := l.apiRoutes
 
@@ -121,10 +125,11 @@ func (l *GinEngine) apiToYamlModel() Path {
 						if fieldInfo.Tags.FormKey == "" && fieldInfo.Tags.UriKey == "" {
 							continue
 						}
+
 						name := fieldInfo.Tags.FormKey
 						in := "query"
-						isUri := fieldInfo.Tags.UriKey != "" && fieldInfo.Tags.UriKey != "-"
-						if isUri {
+						isUriParam := isUri(fieldInfo.Tags.UriKey)
+						if isUriParam {
 							name = fieldInfo.Tags.UriKey
 							in = "path"
 						}
@@ -132,7 +137,7 @@ func (l *GinEngine) apiToYamlModel() Path {
 						res = append(res, Parameter{
 							Name:     name,
 							In:       in,
-							Required: isUri,
+							Required: isUriParam,
 							Schema: SchemaInfo{
 								Type:        getTypeMap(fieldInfo.Type),
 								Title:       fieldInfo.Tags.Title,

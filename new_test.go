@@ -323,7 +323,5 @@ func (p *Path2) GetInfoByID(ctx context.Context, req *struct {
 }
 
 func TestRouteGroup(t *testing.T) {
-	New(gin.Default(), WithControllers(&Path1{Path2: &Path2{}}), WithMetrics(&Metrics{
-		Enable: true,
-	}), WithPing(&Ping{Enable: true}))
+	New(gin.Default(), WithControllers(&Path1{Path2: &Path2{}}))
 }

@@ -181,3 +181,31 @@ func TestGinEngine_genRoute(t *testing.T) {
 		ApiV2: &GenRouteV2{},
 	}))
 }
+
+type LogicApi struct{}
+
+type LogicApiReq struct {
+	EID string `uri:"eid" skip:"true"`
+	PID uint   `uri:"pid" skip:"true"`
+	Id  int    `uri:"id"`
+}
+type LogicApiResp struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data any    `json:"data"`
+}
+
+func (l *LogicApi) GetPing(ctx context.Context, req *LogicApiReq) (*LogicApiResp, error) {
+	return &LogicApiResp{
+		Code: 0,
+		Msg:  "ok",
+		Data: req,
+	}, nil
+}
+
+func TestGinEngine_GenRoute(t *testing.T) {
+	i := New(gin.Default())
+	group := i.Group("/enterprise/:eid/project/:pid")
+	i.GenRoute(group, &LogicApi{}).RegisterSwaggerUI()
+	NewCtrlC(i).Start()
+}

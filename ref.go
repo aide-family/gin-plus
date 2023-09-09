@@ -22,6 +22,7 @@ type (
 	Tag struct {
 		FormKey string
 		UriKey  string
+		Skip    string
 		JsonKey string
 		Title   string
 		Format  string
@@ -29,7 +30,7 @@ type (
 	}
 )
 
-var tags = []string{"form", "uri", "json", "title", "format", "desc"}
+var tags = []string{"form", "uri", "json", "title", "format", "desc", "skip"}
 
 // 获取结构体tag
 func getTag(t reflect.Type) []FieldInfo {
@@ -68,6 +69,8 @@ func getTag(t reflect.Type) []FieldInfo {
 				tagInfo.FormKey = tagVal
 			case "uri":
 				tagInfo.UriKey = tagVal
+			case "skip":
+				tagInfo.Skip = tagVal
 			case "title":
 				tagInfo.Title = tagVal
 			case "format":
