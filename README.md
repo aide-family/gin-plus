@@ -2,6 +2,8 @@
 
 > 用于对gin框架增强, 实现根据结构体+结构体方法名实现路由注册、文档生成等功能
 
+[使用示例](https://github.com/aide-cloud/gin-plus-app)
+
 ## 安装
 
 ```shell
