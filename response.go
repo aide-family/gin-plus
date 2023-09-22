@@ -56,7 +56,7 @@ func (l *GinEngine) newDefaultHandler(controller any, t reflect.Method, req refl
 	controllerVal := reflect.ValueOf(controller)
 	return func(ctx *gin.Context) {
 		// 绑定请求参数
-		if err := Bind(ctx, reqVal.Interface()); err != nil {
+		if err := l.defaultBind(ctx, reqVal.Interface()); err != nil {
 			l.defaultResponse.Response(ctx, nil, err, "request params bind error")
 			return
 		}

@@ -35,6 +35,8 @@ type (
 		defaultHandler HandlerFunc
 		// 自定义Response接口实现
 		defaultResponse IResponser
+		// 默认Bind函数
+		defaultBind func(c *gin.Context, params any) error
 
 		// 文档配置
 		apiConfig          ApiConfig
@@ -178,6 +180,7 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		httpMethodPrefixes:  defaultPrefixes,
 		defaultOpenApiYaml:  defaultOpenApiYaml,
 		defaultResponse:     NewResponse(),
+		defaultBind:         Bind,
 		routeNamingRuleFunc: routeToCamel,
 		apiRoutes:           make(map[string][]ApiRoute),
 		genApiEnable:        true,
