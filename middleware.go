@@ -1,14 +1,24 @@
 package ginplus
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 )
 
 type Middleware struct {
-	resp IResponser
+	resp        IResponser
+	tracing     oteltrace.TracerProvider
+	propagators propagation.TextMapPropagator
 }
 
 // NewMiddleware 创建中间件
@@ -136,5 +146,108 @@ func (l *Middleware) IpLimit(capacity int64, rate float64, msg ...string) gin.Ha
 			return
 		}
 		c.Next()
+	}
+}
+
+// Tracing 链路追踪
+func (l *Middleware) Tracing(name string) gin.HandlerFunc {
+	l.tracing = trace.NewTracerProvider()
+	l.propagators = otel.GetTextMapPropagator()
+	otel.SetTracerProvider(l.tracing)
+
+	tracer := l.tracing.Tracer(name)
+	return func(c *gin.Context) {
+		ctx := l.propagators.Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
+		opts := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(name, c.FullPath(), c.Request)...),
+			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+		}
+		spanName := c.FullPath()
+		if spanName == "" {
+			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
+		}
+
+		ctx, span := tracer.Start(ctx, spanName, opts...)
+		defer span.End()
+
+		c.Request = c.Request.WithContext(ctx)
+		sc := span.SpanContext()
+		if sc.HasTraceID() {
+			c.Header("trace_id", sc.TraceID().String())
+		} else {
+			c.Header("trace_id", "not-trace")
+		}
+
+		c.Request.Header.Set("trace_id", span.SpanContext().TraceID().String())
+		c.Request.Header.Set("span_id", span.SpanContext().SpanID().String())
+		c.Next()
+
+		span.SetAttributes(
+			attribute.String("http.method", c.Request.Method),
+			attribute.String("http.path", c.Request.URL.Path),
+			attribute.String("http.host", c.Request.Host),
+			attribute.String("http.scheme", c.Request.URL.Scheme),
+			attribute.String("http.user_agent", c.Request.UserAgent()),
+			attribute.String("http.client_ip", c.ClientIP()),
+			attribute.String("http.trace_id", span.SpanContext().TraceID().String()),
+			attribute.String("http.span_id", span.SpanContext().SpanID().String()),
+		)
+
+		// 上报错误
+		if len(c.Errors) > 0 {
+			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
+		}
+
+		// 上报状态码
+		status := c.Writer.Status()
+		attrs := semconv.HTTPAttributesFromHTTPStatusCode(status)
+		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(status)
+		span.SetAttributes(attrs...)
+		span.SetStatus(spanStatus, spanMessage)
+	}
+}
+
+// Logger 日志
+func (l *Middleware) Logger(serverName string, timeLayout ...string) gin.HandlerFunc {
+	layout := time.RFC3339
+	if len(timeLayout) > 0 {
+		layout = timeLayout[0]
+	}
+	return func(c *gin.Context) {
+		startTime := time.Now()
+		c.Next()
+		endTime := time.Now()
+		latencyTime := endTime.Sub(startTime)
+		reqMethod := c.Request.Method
+		reqUri := c.Request.RequestURI
+		statusCode := c.Writer.Status()
+		clientIP := c.ClientIP()
+		kv := []zap.Field{
+			zap.String("timestamp", time.Now().Format(layout)),
+			zap.String("start_time", startTime.Format(layout)),
+			zap.String("end_time", endTime.Format(layout)),
+			zap.String("client_ip", clientIP),
+			zap.Int("status_code", statusCode),
+			zap.String("req_method", reqMethod),
+			zap.String("req_uri", reqUri),
+			zap.String("latency_time", latencyTime.String()),
+		}
+
+		if l.tracing != nil {
+			ctx := l.propagators.Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
+			span := oteltrace.SpanContextFromContext(ctx)
+			traceID := ""
+			if span.HasTraceID() {
+				traceID = span.TraceID().String()
+			}
+
+			spanID := ""
+			if span.HasSpanID() {
+				spanID = span.SpanID().String()
+			}
+			kv = append(kv, zap.String("trace_id", traceID), zap.String("span_id", spanID))
+		}
+
+		logger.Info(serverName, kv...)
 	}
 }

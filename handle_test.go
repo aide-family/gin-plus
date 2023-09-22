@@ -20,5 +20,14 @@ func NewHandleApiApi() *HandleApi {
 }
 
 func TestApiHandleFunc(t *testing.T) {
-	New(gin.Default(), WithControllers(NewHandleApiApi()))
+	ginR := gin.New()
+
+	midd := NewMiddleware(NewResponse())
+	serverName := "gin-plus"
+
+	ginR.Use(midd.Tracing(serverName), midd.Logger(serverName))
+
+	r := New(ginR, WithControllers(NewHandleApiApi()))
+
+	NewCtrlC(r).Start()
 }
