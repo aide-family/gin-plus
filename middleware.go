@@ -8,9 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/jaeger"
-	"go.opentelemetry.io/otel/sdk/resource"
-	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -34,10 +31,13 @@ func NewMiddleware(resp IResponser) *Middleware {
 // Cors 直接放行所有跨域请求并放行所有 OPTIONS 方法
 func (l *Middleware) Cors(headers ...map[string]string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, span := otel.Tracer("Middleware.Cors").Start(c.Request.Context(), "Cors")
-		defer span.End()
-		c.Request = c.Request.WithContext(ctx)
-
+		ctx := c.Request.Context()
+		tracerSpan, _ := c.Get("span")
+		span, ok := tracerSpan.(oteltrace.Span)
+		if ok {
+			ctx, span = span.TracerProvider().Tracer("Middleware.Cors").Start(ctx, "Middleware.Cors")
+			defer span.End()
+		}
 		method := c.Request.Method
 		origin := c.Request.Header.Get("Origin")
 		if origin == "null" || origin == "" {
@@ -77,10 +77,13 @@ type InterceptorConfig struct {
 // Interceptor 拦截器, 拦截指定API, 用于控制API当下不允许访问
 func (l *Middleware) Interceptor(configs ...InterceptorConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, span := otel.Tracer("Middleware.Interceptor").Start(c.Request.Context(), "Interceptor")
-		defer span.End()
-		c.Request = c.Request.WithContext(ctx)
-
+		ctx := c.Request.Context()
+		tracerSpan, _ := c.Get("span")
+		span, ok := tracerSpan.(oteltrace.Span)
+		if ok {
+			ctx, span = span.TracerProvider().Tracer("Middleware.Interceptor").Start(ctx, "Middleware.Interceptor")
+			defer span.End()
+		}
 		for _, config := range configs {
 			if config.Method == c.Request.Method && config.Path == c.Request.URL.Path {
 				if len(config.IPList) != 0 {
@@ -133,10 +136,13 @@ func (tb *TokenBucket) Allow() bool {
 func (l *Middleware) IpLimit(capacity int64, rate float64, msg ...string) gin.HandlerFunc {
 	syncTokenMap := sync.Map{}
 	return func(c *gin.Context) {
-		ctx, span := otel.Tracer("Middleware.IpLimit").Start(c.Request.Context(), "IpLimit")
-		defer span.End()
-		c.Request = c.Request.WithContext(ctx)
-
+		ctx := c.Request.Context()
+		tracerSpan, _ := c.Get("span")
+		span, ok := tracerSpan.(oteltrace.Span)
+		if ok {
+			ctx, span = span.TracerProvider().Tracer("Middleware.IpLimit").Start(ctx, "Middleware.IpLimit")
+			defer span.End()
+		}
 		cliectIP := c.ClientIP()
 		if _, ok := syncTokenMap.Load(cliectIP); !ok {
 			clentTb := TokenBucket{
@@ -160,48 +166,6 @@ func (l *Middleware) IpLimit(capacity int64, rate float64, msg ...string) gin.Ha
 			return
 		}
 		c.Next()
-	}
-}
-
-func tracerProvider(url, serviceName, environment, id string) *tracesdk.TracerProvider {
-	// Create the Jaeger exporter
-	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
-	if err != nil {
-		panic(err)
-	}
-	tp := tracesdk.NewTracerProvider(
-		// Always be sure to batch in production.
-		tracesdk.WithBatcher(exp),
-		// Record information about this application in an Resource.
-		tracesdk.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(serviceName),
-			attribute.String("environment", environment),
-			attribute.String("ID", id),
-		)),
-	)
-	otel.SetTracerProvider(tp)
-	return tp
-}
-
-type TracingConfig struct {
-	// Name 服务名称
-	Name string
-	// URL 上报地址
-	URL string
-	// Environment 环境
-	Environment string
-	// ID 服务ID
-	ID       string
-	KeyValue func(c *gin.Context) []attribute.KeyValue
-}
-
-func defaultKeyValueFunc(c *gin.Context) []attribute.KeyValue {
-	return []attribute.KeyValue{
-		attribute.String("http.method", c.Request.Method),
-		attribute.String("http.host", c.Request.Host),
-		attribute.String("http.user_agent", c.Request.UserAgent()),
-		attribute.String("http.client_ip", c.ClientIP()),
 	}
 }
 
@@ -232,6 +196,7 @@ func (l *Middleware) Tracing(cfg TracingConfig) gin.HandlerFunc {
 
 		ctx, span := otel.Tracer("Middleware.Tracing").Start(c.Request.Context(), spanName, opts...)
 		defer span.End()
+		c.Set("span", span)
 
 		c.Request = c.Request.WithContext(ctx)
 		sc := span.SpanContext()
@@ -274,15 +239,10 @@ func (l *Middleware) Logger(serverName string, timeLayout ...string) gin.Handler
 		layout = timeLayout[0]
 	}
 	return func(c *gin.Context) {
-		ctx, span := otel.Tracer("Middleware.Logger").Start(c.Request.Context(), "Logger")
-		defer span.End()
-		c.Request = c.Request.WithContext(ctx)
-
 		startTime := time.Now()
 		c.Next()
 		endTime := time.Now()
 		latencyTime := endTime.Sub(startTime)
-		span.SetAttributes(attribute.String("latency_time", latencyTime.String()))
 
 		reqMethod := c.Request.Method
 		reqUri := c.Request.RequestURI
@@ -299,18 +259,27 @@ func (l *Middleware) Logger(serverName string, timeLayout ...string) gin.Handler
 			zap.String("latency_time", latencyTime.String()),
 		}
 
-		if l.tracing != nil {
-			spanCtx := span.SpanContext()
-			traceID := ""
-			if spanCtx.HasTraceID() {
-				traceID = spanCtx.TraceID().String()
-			}
+		ctx := c.Request.Context()
 
-			spanID := ""
-			if spanCtx.HasSpanID() {
-				spanID = spanCtx.SpanID().String()
+		if l.tracing != nil {
+			tracerSpan, _ := c.Get("span")
+			span, ok := tracerSpan.(oteltrace.Span)
+			if ok {
+				ctx, span = span.TracerProvider().Tracer("Middleware.Logger").Start(ctx, "Middleware.Logger")
+				defer span.End()
+				span.SetAttributes(attribute.String("latency_time", latencyTime.String()))
+				spanCtx := span.SpanContext()
+				traceID := ""
+				if spanCtx.HasTraceID() {
+					traceID = spanCtx.TraceID().String()
+				}
+
+				spanID := ""
+				if spanCtx.HasSpanID() {
+					spanID = spanCtx.SpanID().String()
+				}
+				kv = append(kv, zap.String("trace_id", traceID), zap.String("span_id", spanID))
 			}
-			kv = append(kv, zap.String("trace_id", traceID), zap.String("span_id", spanID))
 		}
 
 		logger.Info(serverName, kv...)
