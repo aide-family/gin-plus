@@ -26,6 +26,7 @@ func NewResponse() IResponser {
 }
 
 func (l *response) Response(ctx *gin.Context, resp any, err error, msg ...string) {
+	defer ctx.Abort()
 	if err != nil {
 		ctx.JSON(500, response{
 			Code:  1,
