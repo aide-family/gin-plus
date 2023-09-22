@@ -455,3 +455,10 @@ func WithPing(ping *Ping) OptionFun {
 		g.ping = ping
 	}
 }
+
+// WithBind 自定义Bind
+func WithBind(bind func(c *gin.Context, params any) error) OptionFun {
+	return func(g *GinEngine) {
+		g.defaultBind = bind
+	}
+}
