@@ -148,7 +148,7 @@ func (l *Middleware) IpLimit(capacity int64, rate float64, msg ...string) gin.Ha
 			clentTb := TokenBucket{
 				capacity:  capacity,
 				rate:      rate,
-				tokens:    0,
+				tokens:    float64(capacity) * rate,
 				lastToken: time.Now(),
 			}
 			syncTokenMap.Store(cliectIP, &clentTb)

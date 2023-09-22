@@ -111,6 +111,11 @@ const (
 
 type OpentracingPlugin struct{}
 
+// NewOpentracingPlugin 创建一个opentracing插件
+func NewOpentracingPlugin() *OpentracingPlugin {
+	return &OpentracingPlugin{}
+}
+
 func (op *OpentracingPlugin) Name() string {
 	return "opentracingPlugin"
 }
