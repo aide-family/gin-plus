@@ -21,11 +21,19 @@ type Middleware struct {
 	env        string
 }
 
+type MiddlewareOption func(*Middleware)
+
 // NewMiddleware 创建中间件
-func NewMiddleware(resp IResponser) *Middleware {
-	return &Middleware{
-		resp: resp,
+func NewMiddleware(opts ...MiddlewareOption) *Middleware {
+	midd := &Middleware{
+		resp: NewResponse(),
 	}
+
+	for _, opt := range opts {
+		opt(midd)
+	}
+
+	return midd
 }
 
 // Cors 直接放行所有跨域请求并放行所有 OPTIONS 方法

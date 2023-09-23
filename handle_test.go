@@ -80,7 +80,7 @@ func NewHandleApiApi() *HandleApi {
 func TestApiHandleFunc(t *testing.T) {
 	ginR := gin.New()
 
-	midd := NewMiddleware(NewResponse())
+	midd := NewMiddleware()
 	serverName := "gin-plus"
 
 	id, _ := os.Hostname()
