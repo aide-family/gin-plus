@@ -50,16 +50,41 @@ func isCallBack(t reflect.Type) (reflect.Type, reflect.Type, bool) {
 	return req, resp, true
 }
 
+func isNil(value interface{}) bool {
+	// 使用反射获取值的类型和值
+	val := reflect.ValueOf(value)
+
+	// 检查值的类型
+	switch val.Kind() {
+	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map, reflect.Chan, reflect.Func:
+		// 对于指针、接口、切片、映射、通道和函数类型，使用IsNil()方法来检查是否为nil
+		return val.IsNil()
+	default:
+		// 对于其他类型，无法直接检查是否为nil
+		return false
+	}
+}
+
 func (l *GinEngine) GenRoute(parentGroup *gin.RouterGroup, controller any) *GinEngine {
+	if isNil(controller) {
+		logger.Warn("controller is nil")
+		return l
+	}
 	l.genRoute(parentGroup, controller, false)
 	return l
 }
 
 func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipAnonymous bool) {
+	if controller == nil {
+		return
+	}
 	t := reflect.TypeOf(controller)
 
 	tmp := t
 	for tmp.Kind() == reflect.Ptr {
+		if tmp == nil {
+			return
+		}
 		tmp = tmp.Elem()
 	}
 
@@ -178,12 +203,18 @@ func (l *GinEngine) registerCallhandler(route *Route, routeGroup *gin.RouterGrou
 
 // genStructRoute 递归注册结构体路由
 func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller reflect.Type) {
+	if isNil(controller) {
+		return
+	}
 	tmp := controller
 	if isStruct(tmp) {
 		// 递归获取内部的controller
 		for i := 0; i < tmp.NumField(); i++ {
 			field := tmp.Field(i)
 			for field.Type.Kind() == reflect.Ptr {
+				if field.Type == nil {
+					break
+				}
 				field.Type = field.Type.Elem()
 			}
 			if !isStruct(field.Type) {
