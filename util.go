@@ -154,7 +154,7 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 		}
 	}
 
-	l.genStructRoute(routeGroup, tmp)
+	l.genStructRoute(routeGroup, controller)
 }
 
 // 生成openAPI数据
@@ -202,19 +202,20 @@ func (l *GinEngine) registerCallhandler(route *Route, routeGroup *gin.RouterGrou
 }
 
 // genStructRoute 递归注册结构体路由
-func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller reflect.Type) {
+func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller any) {
 	if isNil(controller) {
 		return
 	}
-	tmp := controller
+	tmp := reflect.TypeOf(controller)
 	if isStruct(tmp) {
 		// 递归获取内部的controller
 		for i := 0; i < tmp.NumField(); i++ {
 			field := tmp.Field(i)
+			// 判断field值是否为nil
+			if isNil(reflect.ValueOf(controller).Field(i).Interface()) {
+				continue
+			}
 			for field.Type.Kind() == reflect.Ptr {
-				if field.Type == nil {
-					break
-				}
 				field.Type = field.Type.Elem()
 			}
 			if !isStruct(field.Type) {
@@ -225,8 +226,7 @@ func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller refl
 				continue
 			}
 
-			// new一个新的controller
-			newController := reflect.New(field.Type).Interface()
+			newController := reflect.ValueOf(controller).Field(i).Interface()
 			l.genRoute(parentGroup, newController, field.Anonymous)
 		}
 	}
