@@ -203,11 +203,11 @@ func genProperties(fieldList []FieldInfo) map[string]SchemaInfo {
 // "array", "boolean", "integer", "null", "number", "object", "string"
 func getTypeMap(typeStr string) string {
 	switch typeStr {
-	case "int", "int8", "int16", "int132", "int64", "uint", "uint8", "uint16", "uint132", "uint64":
+	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr":
 		return "integer"
-	case "float32", "float64", "ufloat32", "ufloat64":
+	case "float32", "float64", "ufloat32", "ufloat64", "complex64", "complex128":
 		return "number"
-	case "boolean", "string", "array":
+	case "boolean", "string", "array", "bool":
 		return typeStr
 	default:
 		if strings.HasPrefix(typeStr, "[]") {

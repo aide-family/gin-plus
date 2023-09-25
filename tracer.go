@@ -14,16 +14,26 @@ import (
 	"gorm.io/gorm"
 )
 
-type TracingConfig struct {
-	// Name 服务名称
-	Name string
+type tracingConfig struct {
 	// URL 上报地址
-	URL string
-	// Environment 环境
-	Environment string
-	// ID 服务ID
-	ID       string
+	URL      string
 	KeyValue func(c *gin.Context) []attribute.KeyValue
+}
+
+type TracingOption func(*tracingConfig)
+
+// WithTracingURL 设置上报地址
+func WithTracingURL(url string) TracingOption {
+	return func(c *tracingConfig) {
+		c.URL = url
+	}
+}
+
+// WithTracingKeyValueFunc 设置KeyValueFunc
+func WithTracingKeyValueFunc(keyValue func(c *gin.Context) []attribute.KeyValue) TracingOption {
+	return func(c *tracingConfig) {
+		c.KeyValue = keyValue
+	}
 }
 
 func defaultKeyValueFunc(c *gin.Context) []attribute.KeyValue {
@@ -66,8 +76,6 @@ func before(db *gorm.DB) {
 	// 利用db实例去传递span
 	db.InstanceSet(gormSpanKey, span)
 	db.InstanceSet(gormTime, time.Now())
-
-	return
 }
 
 func after(db *gorm.DB) {

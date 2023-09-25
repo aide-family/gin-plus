@@ -2,6 +2,7 @@ package ginplus
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -25,8 +26,12 @@ type MiddlewareOption func(*Middleware)
 
 // NewMiddleware 创建中间件
 func NewMiddleware(opts ...MiddlewareOption) *Middleware {
+	id, _ := os.Hostname()
 	midd := &Middleware{
-		resp: NewResponse(),
+		resp:       NewResponse(),
+		serverName: "ginplus",
+		id:         id,
+		env:        "default",
 	}
 
 	for _, opt := range opts {
@@ -34,6 +39,34 @@ func NewMiddleware(opts ...MiddlewareOption) *Middleware {
 	}
 
 	return midd
+}
+
+// WithResponse 设置响应
+func WithResponse(resp IResponser) MiddlewareOption {
+	return func(m *Middleware) {
+		m.resp = resp
+	}
+}
+
+// WithServerName 设置服务名称
+func WithServerName(serverName string) MiddlewareOption {
+	return func(m *Middleware) {
+		m.serverName = serverName
+	}
+}
+
+// WithID 设置服务ID
+func WithID(id string) MiddlewareOption {
+	return func(m *Middleware) {
+		m.id = id
+	}
+}
+
+// WithEnv 设置环境
+func WithEnv(env string) MiddlewareOption {
+	return func(m *Middleware) {
+		m.env = env
+	}
 }
 
 // Cors 直接放行所有跨域请求并放行所有 OPTIONS 方法
@@ -178,23 +211,20 @@ func (l *Middleware) IpLimit(capacity int64, rate float64, msg ...string) gin.Ha
 }
 
 // Tracing 链路追踪
-func (l *Middleware) Tracing(cfg TracingConfig) gin.HandlerFunc {
-	url := cfg.URL
-	id := cfg.ID
-	environment := cfg.Environment
-	name := cfg.Name
-
-	l.tracing = tracerProvider(url, name, environment, id)
-	l.id = id
-	l.serverName = name
-	l.env = environment
-
-	if cfg.KeyValue == nil {
-		cfg.KeyValue = defaultKeyValueFunc
+func (l *Middleware) Tracing(url string, opts ...TracingOption) gin.HandlerFunc {
+	cfg := &tracingConfig{
+		KeyValue: defaultKeyValueFunc,
+		URL:      url,
 	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	l.tracing = tracerProvider(cfg.URL, l.serverName, l.env, l.id)
+
 	return func(c *gin.Context) {
-		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(name, c.FullPath(), c.Request)...),
+		spanOpts := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(l.serverName, c.FullPath(), c.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		spanName := c.FullPath()
@@ -202,7 +232,7 @@ func (l *Middleware) Tracing(cfg TracingConfig) gin.HandlerFunc {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		}
 
-		ctx, span := otel.Tracer("Middleware.Tracing").Start(c.Request.Context(), spanName, opts...)
+		ctx, span := otel.Tracer("Middleware.Tracing").Start(c.Request.Context(), spanName, spanOpts...)
 		defer span.End()
 		c.Set("span", span)
 
@@ -241,7 +271,7 @@ func (l *Middleware) Tracing(cfg TracingConfig) gin.HandlerFunc {
 }
 
 // Logger 日志
-func (l *Middleware) Logger(serverName string, timeLayout ...string) gin.HandlerFunc {
+func (l *Middleware) Logger(timeLayout ...string) gin.HandlerFunc {
 	layout := time.RFC3339
 	if len(timeLayout) > 0 {
 		layout = timeLayout[0]
@@ -273,7 +303,7 @@ func (l *Middleware) Logger(serverName string, timeLayout ...string) gin.Handler
 			tracerSpan, _ := c.Get("span")
 			span, ok := tracerSpan.(oteltrace.Span)
 			if ok {
-				ctx, span = span.TracerProvider().Tracer("Middleware.Logger").Start(ctx, "Middleware.Logger")
+				_, span := span.TracerProvider().Tracer("Middleware.Logger").Start(ctx, "Middleware.Logger")
 				defer span.End()
 				span.SetAttributes(attribute.String("latency_time", latencyTime.String()))
 				spanCtx := span.SpanContext()
@@ -290,6 +320,6 @@ func (l *Middleware) Logger(serverName string, timeLayout ...string) gin.Handler
 			}
 		}
 
-		logger.Info(serverName, kv...)
+		logger.Info(l.serverName, kv...)
 	}
 }

@@ -16,3 +16,8 @@ func Test_getTag(t *testing.T) {
 
 	t.Log(fieldList)
 }
+
+func Test_getTag2(t *testing.T) {
+	var b bool
+	t.Logf("%T", b)
+}

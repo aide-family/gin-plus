@@ -3,7 +3,6 @@ package ginplus
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -81,18 +80,10 @@ func TestApiHandleFunc(t *testing.T) {
 	ginR := gin.New()
 
 	midd := NewMiddleware()
-	serverName := "gin-plus"
-
-	id, _ := os.Hostname()
 
 	ginR.Use(
-		midd.Tracing(TracingConfig{
-			Name:        serverName,
-			URL:         "http://localhost:14268/api/traces",
-			Environment: "test",
-			ID:          id,
-		}),
-		midd.Logger(serverName),
+		midd.Tracing("http://localhost:14268/api/traces"),
+		midd.Logger(),
 		midd.IpLimit(100, 5, "iplimit"),
 		midd.Interceptor(),
 		midd.Cors(),
