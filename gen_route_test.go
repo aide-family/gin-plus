@@ -8,6 +8,22 @@ import (
 )
 
 type Student struct {
+	A *AApi
+	B *BApi
+}
+
+type AApi struct {
+}
+
+func (a *AApi) Get(ctx context.Context, req *StudentReq) (*StudentResp, error) {
+	return &StudentResp{}, nil
+}
+
+type BApi struct {
+}
+
+func (b *BApi) Get(ctx context.Context, req *StudentReq) (*StudentResp, error) {
+	return &StudentResp{}, nil
 }
 
 type StudentReq struct {
@@ -22,8 +38,11 @@ func (s *Student) Get(ctx context.Context, req *StudentReq) (*StudentResp, error
 
 func TestGenRoute(t *testing.T) {
 	r := gin.Default()
-	var p *Student
-	p = &Student{}
-	pr := New(r).GenRoute(r.Group("/api"), p)
+	// var p *Student
+	p := &Student{
+		A: &AApi{},
+		B: &BApi{},
+	}
+	pr := New(r, WithControllers(p))
 	NewCtrlC(pr)
 }

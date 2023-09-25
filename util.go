@@ -75,7 +75,7 @@ func (l *GinEngine) GenRoute(parentGroup *gin.RouterGroup, controller any) *GinE
 }
 
 func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipAnonymous bool) {
-	if controller == nil {
+	if isNil(controller) {
 		return
 	}
 	t := reflect.TypeOf(controller)
@@ -207,14 +207,21 @@ func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller any)
 		return
 	}
 	tmp := reflect.TypeOf(controller)
+	for tmp.Kind() == reflect.Ptr {
+		if tmp == nil {
+			return
+		}
+		tmp = tmp.Elem()
+	}
 	if isStruct(tmp) {
 		// 递归获取内部的controller
 		for i := 0; i < tmp.NumField(); i++ {
-			field := tmp.Field(i)
 			// 判断field值是否为nil
-			if isNil(reflect.ValueOf(controller).Field(i).Interface()) {
+			if isNil(reflect.ValueOf(controller).Elem().Field(i).Interface()) {
 				continue
 			}
+			field := tmp.Field(i)
+
 			for field.Type.Kind() == reflect.Ptr {
 				field.Type = field.Type.Elem()
 			}
@@ -226,7 +233,7 @@ func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller any)
 				continue
 			}
 
-			newController := reflect.ValueOf(controller).Field(i).Interface()
+			newController := reflect.ValueOf(controller).Elem().Field(i).Interface()
 			l.genRoute(parentGroup, newController, field.Anonymous)
 		}
 	}
@@ -306,5 +313,12 @@ func isMethoderMiddlewarer(c any) (MethoderMiddlewarer, bool) {
 
 // isStruct 判断是否为struct类型
 func isStruct(t reflect.Type) bool {
-	return t.Kind() == reflect.Struct
+	tmp := t
+	for tmp.Kind() == reflect.Ptr {
+		if tmp == nil {
+			return false
+		}
+		tmp = tmp.Elem()
+	}
+	return tmp.Kind() == reflect.Struct
 }
