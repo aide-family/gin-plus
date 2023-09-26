@@ -198,12 +198,12 @@ func (l *Middleware) IpLimit(capacity int64, rate float64, msg ...string) gin.Ha
 		tb, ok := syncTokenMap.Load(cliectIP)
 		if !ok {
 			logger.Error("ip limit error, not found token bucket")
-			l.resp.Response(c, nil, nil, msg...)
+			l.resp.Response(c, nil, nil)
 			return
 		}
 
 		if !tb.(*TokenBucket).Allow() {
-			l.resp.Response(c, nil, nil, msg...)
+			l.resp.Response(c, nil, nil)
 			return
 		}
 		c.Next()
