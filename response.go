@@ -12,6 +12,10 @@ type IResponser interface {
 	Response(ctx *gin.Context, resp any, err error, msg ...string)
 }
 
+type IValidater interface {
+	Validate() error
+}
+
 type response struct {
 	Code  int    `json:"code"`
 	Msg   string `json:"msg"`
@@ -60,6 +64,14 @@ func (l *GinEngine) newDefaultHandler(controller any, t reflect.Method, req refl
 		if err := l.defaultBind(ctx, reqVal.Interface()); err != nil {
 			l.defaultResponse.Response(ctx, nil, err, "request params bind error")
 			return
+		}
+
+		// Validate
+		if validater, ok := reqVal.Interface().(IValidater); ok {
+			if err := validater.Validate(); err != nil {
+				l.defaultResponse.Response(ctx, nil, err, "request params validate error")
+				return
+			}
 		}
 
 		// 调用方法
