@@ -79,7 +79,7 @@ func (l *GinEngine) genOpenApiYaml() {
 	viper.SetConfigFile(apiYaml)
 	viper.SetConfigPermissions(0644)
 	viper.SetConfigType("yaml")
-	viper.Set("openapi", "3.0.3")
+	viper.Set("openapi", "3.1.3")
 	viper.Set("info", Info{
 		Title:   l.apiConfig.Title,
 		Version: l.apiConfig.Version,
