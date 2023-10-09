@@ -72,6 +72,10 @@ func (l *GinEngine) genOpenApiYaml() {
 	if l.defaultOpenApiYaml != "" && strings.HasSuffix(l.defaultOpenApiYaml, ".yaml") {
 		apiYaml = l.defaultOpenApiYaml
 	}
+
+	// 写入之前先清空viper
+	viper.Reset()
+
 	viper.SetConfigFile(apiYaml)
 	viper.SetConfigPermissions(0644)
 	viper.SetConfigType("yaml")
