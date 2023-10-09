@@ -14,6 +14,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// 告诉编译器这个结构体实现了gorm.Plugin接口
+var _ gorm.Plugin = (*OpentracingPlugin)(nil)
+
 type tracingConfig struct {
 	// URL 上报地址
 	URL      string
@@ -72,10 +75,12 @@ const gormTime = "__gorm_time"
 func before(db *gorm.DB) {
 	// 先从父级spans生成子span ---> 这里命名为gorm，但实际上可以自定义
 	// 自己喜欢的operationName
-	_, span := otel.Tracer("gorm").Start(db.Statement.Context, "gorm")
+	ctx, span := otel.Tracer("gorm").Start(db.Statement.Context, "gorm")
 	// 利用db实例去传递span
 	db.InstanceSet(gormSpanKey, span)
 	db.InstanceSet(gormTime, time.Now())
+	// 设置context
+	db.WithContext(ctx)
 }
 
 func after(db *gorm.DB) {
@@ -170,6 +175,3 @@ func (op *OpentracingPlugin) Initialize(db *gorm.DB) (err error) {
 	}
 	return
 }
-
-// 告诉编译器这个结构体实现了gorm.Plugin接口
-var _ gorm.Plugin = &OpentracingPlugin{}
