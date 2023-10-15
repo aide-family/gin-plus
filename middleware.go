@@ -232,7 +232,7 @@ func (l *Middleware) Tracing(url string, opts ...TracingOption) gin.HandlerFunc 
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		}
 
-		ctx, span := otel.Tracer("Middleware.Tracing").Start(c.Request.Context(), spanName, spanOpts...)
+		ctx, span := otel.Tracer("Middleware.Tracing").Start(c, spanName, spanOpts...)
 		defer span.End()
 		c.Set("span", span)
 

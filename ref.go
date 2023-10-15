@@ -32,8 +32,15 @@ type (
 
 var tags = []string{"form", "uri", "json", "title", "format", "desc", "skip"}
 
+// var 临时存储已经处理过的结构体
+var tmpStruct = make(map[string]struct{})
+
 // 获取结构体tag
 func getTag(t reflect.Type) []FieldInfo {
+	if _, ok := tmpStruct[t.String()]; ok {
+		return nil
+	}
+	tmpStruct[t.String()] = struct{}{}
 	tmp := t
 	for tmp.Kind() == reflect.Ptr {
 		tmp = tmp.Elem()
