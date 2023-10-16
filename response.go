@@ -40,12 +40,12 @@ func (l *GinEngine) newDefaultHandler(controller any, t reflect.Method, req refl
 	for reqTmp.Kind() == reflect.Ptr {
 		reqTmp = reqTmp.Elem()
 	}
-	// new一个req的实例
-	reqVal := reflect.New(reqTmp)
 
 	handleFunc := t.Func
 	controllerVal := reflect.ValueOf(controller)
 	return func(ctx *gin.Context) {
+		// new一个req的实例
+		reqVal := reflect.New(reqTmp)
 		// 绑定请求参数
 		if err := l.defaultBind(ctx, reqVal.Interface()); err != nil {
 			l.defaultResponse.Response(ctx, nil, err)
