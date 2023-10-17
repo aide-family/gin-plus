@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type IResponser interface {
@@ -48,6 +49,7 @@ func (l *GinEngine) newDefaultHandler(controller any, t reflect.Method, req refl
 		reqVal := reflect.New(reqTmp)
 		// 绑定请求参数
 		if err := l.defaultBind(ctx, reqVal.Interface()); err != nil {
+			Logger().Info("defaultBind req err", zap.Error(err))
 			l.defaultResponse.Response(ctx, nil, err)
 			return
 		}
@@ -55,6 +57,7 @@ func (l *GinEngine) newDefaultHandler(controller any, t reflect.Method, req refl
 		// Validate
 		if validater, ok := reqVal.Interface().(IValidater); ok {
 			if err := validater.Validate(); err != nil {
+				Logger().Info("Validate req err", zap.Error(err))
 				l.defaultResponse.Response(ctx, nil, err)
 				return
 			}
@@ -65,9 +68,11 @@ func (l *GinEngine) newDefaultHandler(controller any, t reflect.Method, req refl
 		if !respVal[1].IsNil() {
 			err, ok := respVal[1].Interface().(error)
 			if ok {
+				Logger().Info("handleFunc Call err", zap.Error(err))
 				l.defaultResponse.Response(ctx, nil, err)
 				return
 			}
+			Logger().Info("handleFunc Call abnormal err", zap.Error(err))
 			l.defaultResponse.Response(ctx, nil, errors.New("response error"))
 			return
 		}
