@@ -93,10 +93,10 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 	}
 
 	var middlewares []gin.HandlerFunc
-	midd, isMidd := isMiddlewarer(controller)
-	if isMidd {
+	mid, isMid := isMiddleware(controller)
+	if isMid {
 		//Middlewares方法返回的是gin.HandlerFunc类型的切片, 中间件
-		middlewares = midd.Middlewares()
+		middlewares = mid.Middlewares()
 	}
 
 	basePath := l.routeNamingRuleFunc(tmp.Name())
@@ -110,28 +110,28 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 	}
 	routeGroup := parentRouteGroup.Group(path.Join(basePath), middlewares...)
 
-	methoderMiddlewaresMap := make(map[string][]gin.HandlerFunc)
-	methoderMidd, privateMiddOk := isMethoderMiddlewarer(controller)
-	if privateMiddOk {
-		methoderMiddlewaresMap = methoderMidd.MethoderMiddlewares()
+	methodMiddlewaresMap := make(map[string][]gin.HandlerFunc)
+	methodMid, privateMidOk := isMethodMiddleware(controller)
+	if privateMidOk {
+		methodMiddlewaresMap = methodMid.MethodeMiddlewares()
 	}
 
 	if !skipAnonymous {
 		for i := 0; i < t.NumMethod(); i++ {
-			metheodName := t.Method(i).Name
-			if !isPublic(metheodName) {
+			methodName := t.Method(i).Name
+			if !isPublic(methodName) {
 				continue
 			}
 
-			route := l.parseRoute(metheodName)
+			route := l.parseRoute(methodName)
 			if route == nil {
 				continue
 			}
 
-			privateMidd := methoderMiddlewaresMap[metheodName]
+			privateMid := methodMiddlewaresMap[methodName]
 
 			// 接口私有中间件
-			route.Handles = append(route.Handles, privateMidd...)
+			route.Handles = append(route.Handles, privateMid...)
 
 			if isHandlerFunc(t.Method(i).Type) {
 				// 具体的action
@@ -145,10 +145,10 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 			req, resp, isCb := isCallBack(t.Method(i).Type)
 			if isCb {
 				// 生成路由openAPI数据
-				l.genOpenAPI(routeGroup, req, resp, route, metheodName)
+				l.genOpenAPI(routeGroup, req, resp, route, methodName)
 				// 注册路由回调函数
 				handleFunc := l.defaultHandler(controller, t.Method(i), req)
-				l.registerCallhandler(route, routeGroup, handleFunc)
+				l.registerCallHandler(route, routeGroup, handleFunc)
 				continue
 			}
 		}
@@ -158,14 +158,14 @@ func (l *GinEngine) genRoute(parentGroup *gin.RouterGroup, controller any, skipA
 }
 
 // 生成openAPI数据
-func (l *GinEngine) genOpenAPI(group *gin.RouterGroup, req, resp reflect.Type, route *Route, metheodName string) {
+func (l *GinEngine) genOpenAPI(group *gin.RouterGroup, req, resp reflect.Type, route *Route, methodName string) {
 	reqName := req.Name()
 	respName := resp.Name()
 	reqTagInfo := getTag(req)
 	apiRoute := ApiRoute{
 		Path:       route.Path,
 		HttpMethod: strings.ToLower(route.HttpMethod),
-		MethodName: metheodName,
+		MethodName: methodName,
 		ReqParams: Field{
 			Name: reqName,
 			Info: reqTagInfo,
@@ -194,8 +194,8 @@ func (l *GinEngine) genOpenAPI(group *gin.RouterGroup, req, resp reflect.Type, r
 	l.apiRoutes[apiPath] = append(l.apiRoutes[apiPath], apiRoute)
 }
 
-// registerCallhandler 注册回调函数
-func (l *GinEngine) registerCallhandler(route *Route, routeGroup *gin.RouterGroup, handleFunc gin.HandlerFunc) {
+// registerCallHandler 注册回调函数
+func (l *GinEngine) registerCallHandler(route *Route, routeGroup *gin.RouterGroup, handleFunc gin.HandlerFunc) {
 	// 具体的action
 	route.Handles = append(route.Handles, handleFunc)
 	routeGroup.Handle(strings.ToUpper(route.HttpMethod), route.Path, route.Handles...)
@@ -293,10 +293,10 @@ func routeToCamel(route string) string {
 	return route
 }
 
-// isMiddlewarer 判断是否为Controller类型
-func isMiddlewarer(c any) (Middlewarer, bool) {
-	midd, ok := c.(Middlewarer)
-	return midd, ok
+// isMiddleware 判断是否为Controller类型
+func isMiddleware(c any) (IMiddleware, bool) {
+	mid, ok := c.(IMiddleware)
+	return mid, ok
 }
 
 // isController 判断是否为Controller类型
@@ -305,10 +305,10 @@ func isController(c any) (Controller, bool) {
 	return ctrl, ok
 }
 
-// isMethoderMiddlewarer 判断是否为MethoderMiddlewarer类型
-func isMethoderMiddlewarer(c any) (MethoderMiddlewarer, bool) {
-	midd, ok := c.(MethoderMiddlewarer)
-	return midd, ok
+// isMethodMiddleware 判断是否为MethodMiddleware类型
+func isMethodMiddleware(c any) (MethodeMiddleware, bool) {
+	mid, ok := c.(MethodeMiddleware)
+	return mid, ok
 }
 
 // isStruct 判断是否为struct类型

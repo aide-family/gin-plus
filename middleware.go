@@ -15,7 +15,7 @@ import (
 )
 
 type Middleware struct {
-	resp       IResponser
+	resp       IResponse
 	tracing    oteltrace.TracerProvider
 	serverName string
 	id         string
@@ -27,22 +27,22 @@ type MiddlewareOption func(*Middleware)
 // NewMiddleware 创建中间件
 func NewMiddleware(opts ...MiddlewareOption) *Middleware {
 	id, _ := os.Hostname()
-	midd := &Middleware{
+	mid := &Middleware{
 		resp:       NewResponse(),
-		serverName: "ginplus",
+		serverName: "gin-plus",
 		id:         id,
 		env:        "default",
 	}
 
 	for _, opt := range opts {
-		opt(midd)
+		opt(mid)
 	}
 
-	return midd
+	return mid
 }
 
 // WithResponse 设置响应
-func WithResponse(resp IResponser) MiddlewareOption {
+func WithResponse(resp IResponse) MiddlewareOption {
 	return func(m *Middleware) {
 		m.resp = resp
 	}
@@ -76,7 +76,7 @@ func (l *Middleware) Cors(headers ...map[string]string) gin.HandlerFunc {
 		tracerSpan, _ := c.Get("span")
 		span, ok := tracerSpan.(oteltrace.Span)
 		if ok {
-			ctx, span = span.TracerProvider().Tracer("Middleware.Cors").Start(ctx, "Middleware.Cors")
+			ctx, span = span.TracerProvider().Tracer("IMiddleware.Cors").Start(ctx, "IMiddleware.Cors")
 			defer span.End()
 		}
 		method := c.Request.Method
@@ -122,7 +122,7 @@ func (l *Middleware) Interceptor(configs ...InterceptorConfig) gin.HandlerFunc {
 		tracerSpan, _ := c.Get("span")
 		span, ok := tracerSpan.(oteltrace.Span)
 		if ok {
-			ctx, span = span.TracerProvider().Tracer("Middleware.Interceptor").Start(ctx, "Middleware.Interceptor")
+			ctx, span = span.TracerProvider().Tracer("IMiddleware.Interceptor").Start(ctx, "IMiddleware.Interceptor")
 			defer span.End()
 		}
 		for _, config := range configs {
@@ -174,28 +174,28 @@ func (tb *TokenBucket) Allow() bool {
 }
 
 // IpLimit IP限制, 用于控制API的访问频率
-func (l *Middleware) IpLimit(capacity int64, rate float64, msg ...string) gin.HandlerFunc {
+func (l *Middleware) IpLimit(capacity int64, rate float64) gin.HandlerFunc {
 	syncTokenMap := sync.Map{}
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		tracerSpan, _ := c.Get("span")
 		span, ok := tracerSpan.(oteltrace.Span)
 		if ok {
-			ctx, span = span.TracerProvider().Tracer("Middleware.IpLimit").Start(ctx, "Middleware.IpLimit")
+			ctx, span = span.TracerProvider().Tracer("IMiddleware.IpLimit").Start(ctx, "IMiddleware.IpLimit")
 			defer span.End()
 		}
-		cliectIP := c.ClientIP()
-		if _, ok := syncTokenMap.Load(cliectIP); !ok {
-			clentTb := TokenBucket{
+		clientIP := c.ClientIP()
+		if _, ok := syncTokenMap.Load(clientIP); !ok {
+			clientTb := TokenBucket{
 				capacity:  capacity,
 				rate:      rate,
 				tokens:    float64(capacity) * rate,
 				lastToken: time.Now(),
 			}
-			syncTokenMap.Store(cliectIP, &clentTb)
+			syncTokenMap.Store(clientIP, &clientTb)
 		}
 
-		tb, ok := syncTokenMap.Load(cliectIP)
+		tb, ok := syncTokenMap.Load(clientIP)
 		if !ok {
 			logger.Error("ip limit error, not found token bucket")
 			l.resp.Response(c, nil, nil)
@@ -232,7 +232,7 @@ func (l *Middleware) Tracing(url string, opts ...TracingOption) gin.HandlerFunc 
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		}
 
-		ctx, span := otel.Tracer("Middleware.Tracing").Start(c, spanName, spanOpts...)
+		ctx, span := otel.Tracer("IMiddleware.Tracing").Start(c, spanName, spanOpts...)
 		defer span.End()
 		c.Set("span", span)
 
@@ -303,7 +303,7 @@ func (l *Middleware) Logger(timeLayout ...string) gin.HandlerFunc {
 			tracerSpan, _ := c.Get("span")
 			span, ok := tracerSpan.(oteltrace.Span)
 			if ok {
-				_, span := span.TracerProvider().Tracer("Middleware.Logger").Start(ctx, "Middleware.Logger")
+				_, span := span.TracerProvider().Tracer("IMiddleware.Logger").Start(ctx, "IMiddleware.Logger")
 				defer span.End()
 				span.SetAttributes(attribute.String("latency_time", latencyTime.String()))
 				spanCtx := span.SpanContext()

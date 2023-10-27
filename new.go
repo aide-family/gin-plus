@@ -5,7 +5,6 @@ import (
 	"embed"
 	"errors"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -25,16 +24,21 @@ type HandlerFunc func(controller any, t reflect.Method, req reflect.Type) gin.Ha
 type (
 	GinEngine struct {
 		*gin.Engine
-		middlewares        []gin.HandlerFunc
-		controllers        []any
+
+		// 中间件
+		middlewares []gin.HandlerFunc
+		// 控制器
+		controllers []any
+		// 绑定前缀和http请求方法的映射
 		httpMethodPrefixes map[string]httpMethod
-		basePath           string
+		// 路由组基础路径
+		basePath string
 		// 自定义路由命名规则函数
 		routeNamingRuleFunc func(methodName string) string
 		// 自定义handler函数
 		defaultHandler HandlerFunc
 		// 自定义Response接口实现
-		defaultResponse IResponser
+		defaultResponse IResponse
 		// 默认Bind函数
 		defaultBind func(c *gin.Context, params any) error
 
@@ -76,14 +80,14 @@ type (
 	// RouteNamingRuleFunc 自定义路由命名函数
 	RouteNamingRuleFunc func(methodName string) string
 
-	// Middlewarer 中间件接口, 实现该接口的结构体将会被把中间件添加到该路由组的公共中间件中
-	Middlewarer interface {
+	// IMiddleware 中间件接口, 实现该接口的结构体将会被把中间件添加到该路由组的公共中间件中
+	IMiddleware interface {
 		Middlewares() []gin.HandlerFunc
 	}
 
-	// MethoderMiddlewarer 中间件接口, 为每个方法添加中间件
-	MethoderMiddlewarer interface {
-		MethoderMiddlewares() map[string][]gin.HandlerFunc
+	// MethodeMiddleware 中间件接口, 为每个方法添加中间件
+	MethodeMiddleware interface {
+		MethodeMiddlewares() map[string][]gin.HandlerFunc
 	}
 
 	// Controller 控制器接口, 实现该接口的对象可以自定义模块的路由
@@ -147,7 +151,7 @@ const (
 
 const (
 	defaultTitle       = "github.com/aide-cloud/gin-plus"
-	defaultVrsion      = "v0.3.1"
+	defaultVersion     = "v0.5.0"
 	defaultMetricsPath = "/metrics"
 	defaultPingPath    = "/ping"
 )
@@ -186,7 +190,7 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 		genApiEnable:        true,
 		apiConfig: ApiConfig{
 			Title:   defaultTitle,
-			Version: defaultVrsion,
+			Version: defaultVersion,
 		},
 		ping: &Ping{HandlerFunc: func(ctx *gin.Context) {
 			ctx.Status(http.StatusOK)
@@ -211,6 +215,7 @@ func New(r *gin.Engine, opts ...OptionFun) *GinEngine {
 	return instance
 }
 
+// Start 启动HTTP服务器
 func (l *GinEngine) Start() error {
 	if l.server == nil {
 		//创建HTTP服务器
@@ -224,15 +229,16 @@ func (l *GinEngine) Start() error {
 	//启动HTTP服务器
 	go func() {
 		if err := l.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("[GIN-PLUS] [INFO] Server listen: %s\n", err)
+			Logger().Sugar().Infof("[GIN-PLUS] [INFO] Server listen: %s\n", err)
 		}
 	}()
 
-	log.Println("[GIN-PLUS] [INFO] Server is running at", l.addr)
+	Logger().Sugar().Infof("[GIN-PLUS] [INFO] Server is running at %s", l.addr)
 
 	return nil
 }
 
+// Stop 停止HTTP服务器
 func (l *GinEngine) Stop() {
 	//创建超时上下文，Shutdown可以让未处理的连接在这个时间内关闭
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -240,10 +246,10 @@ func (l *GinEngine) Stop() {
 
 	//停止HTTP服务器
 	if err := l.server.Shutdown(ctx); err != nil {
-		log.Fatal("[GIN-PLUS] [INFO] Server Shutdown:", err)
+		Logger().Sugar().Errorf("[GIN-PLUS] [INFO] Server Shutdown: %v", err)
 	}
 
-	log.Println("[GIN-PLUS] [INFO] Server stopped")
+	Logger().Sugar().Infof("[GIN-PLUS] [INFO] Server stopped")
 }
 
 func registerPing(instance *GinEngine, ping *Ping) {
@@ -299,6 +305,7 @@ func (l *GinEngine) RegisterPing(ping ...*Ping) *GinEngine {
 	return l
 }
 
+// RegisterMetrics 注册prometheus metrics
 func (l *GinEngine) RegisterMetrics(metrics ...*Metrics) *GinEngine {
 	if len(metrics) > 0 {
 		l.metrics = metrics[0]
@@ -307,11 +314,13 @@ func (l *GinEngine) RegisterMetrics(metrics ...*Metrics) *GinEngine {
 	return l
 }
 
+// RegisterSwaggerUI 注册swagger ui
 func (l *GinEngine) RegisterSwaggerUI() *GinEngine {
 	registerSwaggerUI(l, l.genApiEnable)
 	return l
 }
 
+// RegisterGraphql 注册graphql
 func (l *GinEngine) RegisterGraphql(config ...*GraphqlConfig) *GinEngine {
 	if len(config) > 0 {
 		l.graphqlConfig = *config[0]
@@ -337,31 +346,31 @@ func WithMiddlewares(middlewares ...gin.HandlerFunc) OptionFun {
 // WithHttpMethodPrefixes sets the prefixes.
 func WithHttpMethodPrefixes(prefixes ...HttpMethod) OptionFun {
 	return func(g *GinEngine) {
-		prefixeHttpMethodMap := make(map[string]httpMethod)
+		prefixHttpMethodMap := make(map[string]httpMethod)
 		for _, prefix := range prefixes {
 			if prefix.Prefix == "" || prefix.Method.key == "" {
 				continue
 			}
-			prefixeHttpMethodMap[prefix.Prefix] = prefix.Method
+			prefixHttpMethodMap[prefix.Prefix] = prefix.Method
 		}
-		g.httpMethodPrefixes = prefixeHttpMethodMap
+		g.httpMethodPrefixes = prefixHttpMethodMap
 	}
 }
 
 // AppendHttpMethodPrefixes append the prefixes.
 func AppendHttpMethodPrefixes(prefixes ...HttpMethod) OptionFun {
 	return func(g *GinEngine) {
-		prefixeHttpMethodMap := g.httpMethodPrefixes
-		if prefixeHttpMethodMap == nil {
-			prefixeHttpMethodMap = make(map[string]httpMethod)
+		prefixHttpMethodMap := g.httpMethodPrefixes
+		if prefixHttpMethodMap == nil {
+			prefixHttpMethodMap = make(map[string]httpMethod)
 		}
 		for _, prefix := range prefixes {
 			if prefix.Prefix == "" || prefix.Method.key == "" {
 				continue
 			}
-			prefixeHttpMethodMap[prefix.Prefix] = prefix.Method
+			prefixHttpMethodMap[prefix.Prefix] = prefix.Method
 		}
-		g.httpMethodPrefixes = prefixeHttpMethodMap
+		g.httpMethodPrefixes = prefixHttpMethodMap
 	}
 }
 
@@ -390,7 +399,7 @@ func WithApiConfig(c ApiConfig) OptionFun {
 func WithOpenApiYaml(dir, filename string) OptionFun {
 	return func(g *GinEngine) {
 		if !strings.HasSuffix(filename, ".yaml") {
-			log.Printf("[GIN-PLUS] [WARNING] filename has no (.yaml) suffix,  so the default (%s) is used as the filename.\n", defaultOpenApiYaml)
+			Logger().Sugar().Infof("[GIN-PLUS] [WARNING] filename has no (.yaml) suffix,  so the default (%s) is used as the filename.\n", defaultOpenApiYaml)
 		}
 		g.defaultOpenApiYaml = path.Join(dir, filename)
 	}
@@ -436,7 +445,7 @@ func WithDefaultHandler(handler HandlerFunc) OptionFun {
 }
 
 // WithDefaultResponse 自定义Response接口实现
-func WithDefaultResponse(response IResponser) OptionFun {
+func WithDefaultResponse(response IResponse) OptionFun {
 	return func(g *GinEngine) {
 		g.defaultResponse = response
 	}

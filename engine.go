@@ -1,7 +1,6 @@
 package ginplus
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,6 +11,7 @@ type (
 	Starter interface {
 		Start() error
 	}
+
 	// Stopper 结束方法的接口
 	Stopper interface {
 		Stop()
@@ -53,7 +53,7 @@ func (c *CtrlC) waitKill() {
 
 func (c *CtrlC) recover() {
 	if err := recover(); err != nil {
-		fmt.Println(err)
+		Logger().Sugar().Panicf("panic: %v", err)
 		c.signalChan <- os.Kill
 	}
 }

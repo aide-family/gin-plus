@@ -96,10 +96,10 @@ func isUri(uriStr string) bool {
 }
 
 func (l *GinEngine) apiToYamlModel() Path {
-	apiReoutes := l.apiRoutes
+	apiRoutes := l.apiRoutes
 
 	apiPath := make(Path)
-	for url, info := range apiReoutes {
+	for url, info := range apiRoutes {
 		if _, ok := apiPath[url]; !ok {
 			apiPath[url] = make(map[string]ApiHttpMethod)
 		}
@@ -209,7 +209,7 @@ func getTypeMap(typeStr string) string {
 	switch typeStr {
 	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr":
 		return "integer"
-	case "float32", "float64", "ufloat32", "ufloat64", "complex64", "complex128":
+	case "float32", "float64", "complex64", "complex128":
 		return "number"
 	case "boolean", "string", "array", "bool":
 		return typeStr

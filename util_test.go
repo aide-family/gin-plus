@@ -45,7 +45,7 @@ func Test_isController(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, got := isMiddlewarer(tt.args.c)
+			_, got := isMiddleware(tt.args.c)
 			if got != tt.want {
 				t.Errorf("isController() = %v, want %v", got, tt.want)
 			}
@@ -66,7 +66,7 @@ type (
 	}
 )
 
-func (c *Call) CallBack(ctx context.Context, req Req) (Resp, error) {
+func (c *Call) CallBack(_ context.Context, _ Req) (Resp, error) {
 	return Resp{}, nil
 }
 
@@ -96,7 +96,7 @@ func TestGinEngine_isPublic(t *testing.T) {
 	}
 
 	if isPublic("abc") {
-		t.Log("abc is privite")
+		t.Log("abc is private")
 	}
 }
 
@@ -121,19 +121,19 @@ type PubResp struct {
 	Data any    `json:"data"`
 }
 
-func (p *Pub) GetPingA(ctx context.Context, req *PubReq) (*PubResp, error) {
+func (p *Pub) GetPingA(_ context.Context, _ *PubReq) (*PubResp, error) {
 	return nil, nil
 }
 
-func (p *Pub) getPingB(ctx context.Context, req *PubReq) (*PubResp, error) {
+func (p *Pub) getPingB(_ context.Context, _ *PubReq) (*PubResp, error) {
 	return nil, nil
 }
 
-func (p *V1) GetList(ctx context.Context, req *PubReq) (*PubResp, error) {
+func (p *V1) GetList(_ context.Context, _ *PubReq) (*PubResp, error) {
 	return nil, nil
 }
 
-func TestPriviteMethod(t *testing.T) {
+func TestPrivateMethod(t *testing.T) {
 	New(gin.Default(), WithControllers(&Pub{
 		v1: &V1{},
 	}), AppendHttpMethodPrefixes(
@@ -162,16 +162,16 @@ type GenRouteApi struct {
 	ApiV2 *GenRouteV2
 }
 
-func (g *GenRouteV1) GetPing(ctx context.Context, req *PubReq) (*PubResp, error) {
+func (g *GenRouteV1) GetPing(_ context.Context, _ *PubReq) (*PubResp, error) {
 	return nil, nil
 }
-func (g *GenRouteV2) PostPing(ctx context.Context, req *PubReq) (*PubResp, error) {
+func (g *GenRouteV2) PostPing(_ context.Context, _ *PubReq) (*PubResp, error) {
 	return nil, nil
 }
-func (g *GenRouteApi) PutPing(ctx context.Context, req *PubReq) (*PubResp, error) {
+func (g *GenRouteApi) PutPing(_ context.Context, _ *PubReq) (*PubResp, error) {
 	return nil, nil
 }
-func (g *GenRouteApi) DeletePing(ctx context.Context, req *PubReq) (*PubResp, error) {
+func (g *GenRouteApi) DeletePing(_ context.Context, _ *PubReq) (*PubResp, error) {
 	return nil, nil
 }
 
@@ -195,7 +195,7 @@ type LogicApiResp struct {
 	Data any    `json:"data"`
 }
 
-func (l *LogicApi) GetPing(ctx context.Context, req *LogicApiReq) (*LogicApiResp, error) {
+func (l *LogicApi) GetPing(_ context.Context, req *LogicApiReq) (*LogicApiResp, error) {
 	return &LogicApiResp{
 		Code: 0,
 		Msg:  "ok",

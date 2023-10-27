@@ -33,7 +33,7 @@ type PromStrategy struct {
 	For          string           `gorm:"column:for;type:varchar(64);not null;default:10s;comment:持续时间" json:"for"`                                               // 持续时间
 	Labels       string           `gorm:"column:labels;type:json;not null;comment:标签" json:"labels"`                                                              // 标签
 	Annotations  string           `gorm:"column:annotations;type:json;not null;comment:告警文案" json:"annotations"`                                                  // 告警文案
-	AlertLevelID int32            `gorm:"column:alert_level_id;type:int;not null;index:idx__alart_level_id,priority:1;comment:告警等级dict ID" json:"alert_level_id"` // 告警等级dict ID
+	AlertLevelID int32            `gorm:"column:alert_level_id;type:int;not null;index:idx__alert_level_id,priority:1;comment:告警等级dict ID" json:"alert_level_id"` // 告警等级dict ID
 	Status       int32            `gorm:"column:status;type:tinyint;not null;default:1;comment:启用状态: 1启用;2禁用" json:"status"`                                      // 启用状态: 1启用;2禁用
 	CreatedAt    time.Time        `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                     // 创建时间
 	UpdatedAt    time.Time        `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                     // 更新时间

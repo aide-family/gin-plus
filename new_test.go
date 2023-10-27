@@ -20,9 +20,9 @@ type Img struct {
 type File struct {
 }
 
-var _ Middlewarer = (*People)(nil)
+var _ IMiddleware = (*People)(nil)
 var _ Controller = (*People)(nil)
-var _ MethoderMiddlewarer = (*People)(nil)
+var _ MethodeMiddleware = (*People)(nil)
 
 func (l *Img) GetImgInfo() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -48,11 +48,11 @@ func (p *People) List() gin.HandlerFunc {
 	}
 }
 
-func (p *People) PostCreateInfo(ctx context.Context, req struct{ Name string }) (string, error) {
+func (p *People) PostCreateInfo(_ context.Context, _ struct{ Name string }) (string, error) {
 	return "PostCreateInfo", errors.New("custom error")
 }
 
-func (p *People) PutUpdateInfo(ctx context.Context, req struct{ Name string }) (struct{ Name string }, error) {
+func (p *People) PutUpdateInfo(_ context.Context, req struct{ Name string }) (struct{ Name string }, error) {
 	return struct{ Name string }{Name: req.Name}, nil
 }
 
@@ -71,7 +71,7 @@ func (p *People) BasePath() string {
 	return "/people/v1"
 }
 
-func (p *People) MethoderMiddlewares() map[string][]gin.HandlerFunc {
+func (p *People) MethodeMiddlewares() map[string][]gin.HandlerFunc {
 	return map[string][]gin.HandlerFunc{
 		"GetInfo": {
 			func(ctx *gin.Context) {
@@ -83,7 +83,7 @@ func (p *People) MethoderMiddlewares() map[string][]gin.HandlerFunc {
 
 type Slice []string
 
-var _ Middlewarer = (*Slice)(nil)
+var _ IMiddleware = (*Slice)(nil)
 
 func (l *Slice) Middlewares() []gin.HandlerFunc {
 	return nil
@@ -129,7 +129,7 @@ func TestNew(t *testing.T) {
 		}),
 	}
 	ginInstance := New(r, opts...)
-	ginInstance.Run(":8080")
+	_ = ginInstance.Run(":8080")
 }
 
 type (
@@ -150,7 +150,7 @@ type (
 	}
 )
 
-func (l *MyController) GetInfo(ctx context.Context, req MyControllerReq) (*MyControllerResp, error) {
+func (l *MyController) GetInfo(_ context.Context, req MyControllerReq) (*MyControllerResp, error) {
 	log.Println(req)
 	return nil, nil
 }
@@ -172,73 +172,73 @@ func TestGenApiRun(t *testing.T) {
 		WithControllers(&MyController{}),
 	}
 	ginInstance := New(r, opts...)
-	ginInstance.Run()
+	_ = ginInstance.Run()
 }
 
 type (
-	MiddController struct {
-		ChildMiddController *ChildMiddController
+	MidController struct {
+		ChildMidController *ChildMidController
 	}
 
-	ChildMiddController struct {
+	ChildMidController struct {
 	}
 )
 
-func (l *ChildMiddController) Middlewares() []gin.HandlerFunc {
+func (l *ChildMidController) Middlewares() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		func(ctx *gin.Context) {
-			log.Println("ChildMiddController")
+			log.Println("ChildMidController")
 		},
 	}
 }
 
-func (l *ChildMiddController) Info() gin.HandlerFunc {
+func (l *ChildMidController) Info() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		log.Println("Info action")
 	}
 }
 
-type DetailxReq struct {
+type DetailReq struct {
 	Id uint `uri:"id"`
 }
 
-type DetailxResp struct {
+type DetailResp struct {
 	Name string `json:"name"`
 	Id   uint   `json:"id"`
 }
 
-func (l *ChildMiddController) Detile(ctx context.Context, req *DetailxReq) (*DetailxResp, error) {
-	log.Println("Detile")
-	return &DetailxResp{Name: "aide-cloud", Id: req.Id}, nil
+func (l *ChildMidController) Detail(_ context.Context, req *DetailReq) (*DetailResp, error) {
+	log.Println("Detail")
+	return &DetailResp{Name: "aide-cloud", Id: req.Id}, nil
 }
 
-func (l *MiddController) Middlewares() []gin.HandlerFunc {
+func (l *MidController) Middlewares() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		func(ctx *gin.Context) {
-			log.Println("MiddController")
+			log.Println("MidController")
 		},
 	}
 }
 
-func (l *MiddController) GetParent() gin.HandlerFunc {
+func (l *MidController) GetParent() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		log.Println("Parent action")
 	}
 }
 
-var _ Middlewarer = (*MiddController)(nil)
-var _ Middlewarer = (*ChildMiddController)(nil)
+var _ IMiddleware = (*MidController)(nil)
+var _ IMiddleware = (*ChildMidController)(nil)
 
-func TestGenApiRunMidd(t *testing.T) {
+func TestGenApiRunMid(t *testing.T) {
 	r := gin.Default()
 	opts := []OptionFun{
 		WithBasePath("aide-cloud"),
-		WithControllers(&MiddController{
-			ChildMiddController: &ChildMiddController{},
+		WithControllers(&MidController{
+			ChildMidController: &ChildMidController{},
 		}),
 	}
 	ginInstance := New(r, opts...)
-	ginInstance.Run()
+	_ = ginInstance.Run()
 }
 
 type (
@@ -249,7 +249,7 @@ type (
 	}
 )
 
-func (p *Path2) MethoderMiddlewares() map[string][]gin.HandlerFunc {
+func (p *Path2) MethodeMiddlewares() map[string][]gin.HandlerFunc {
 	return map[string][]gin.HandlerFunc{
 		"GetInfoByID": {
 			func(ctx *gin.Context) {
@@ -284,9 +284,9 @@ func (p *Path1) Middlewares() []gin.HandlerFunc {
 	}
 }
 
-var _ Middlewarer = (*Path1)(nil)
-var _ Middlewarer = (*Path2)(nil)
-var _ MethoderMiddlewarer = (*Path2)(nil)
+var _ IMiddleware = (*Path1)(nil)
+var _ IMiddleware = (*Path2)(nil)
+var _ MethodeMiddleware = (*Path2)(nil)
 
 func (p *Path1) GetInfo() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -294,7 +294,7 @@ func (p *Path1) GetInfo() gin.HandlerFunc {
 	}
 }
 
-func (p *Path1) GetInfoByID(ctx context.Context, req *struct {
+func (p *Path1) GetInfoByID(_ context.Context, req *struct {
 	Id uint `uri:"id"`
 }) (*struct {
 	Id uint `json:"id"`
@@ -311,7 +311,7 @@ func (p *Path2) GetInfo() gin.HandlerFunc {
 	}
 }
 
-func (p *Path2) GetInfoByID(ctx context.Context, req *struct {
+func (p *Path2) GetInfoByID(_ context.Context, req *struct {
 	Id uint `uri:"id"`
 }) (*struct {
 	Id uint `json:"id"`

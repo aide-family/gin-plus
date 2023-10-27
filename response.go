@@ -8,11 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type IResponser interface {
+type IResponse interface {
 	Response(ctx *gin.Context, resp any, err error)
 }
 
-type IValidater interface {
+type IValidator interface {
 	Validate() error
 }
 
@@ -21,9 +21,9 @@ type response struct {
 	Data  any   `json:"data"`
 }
 
-var _ IResponser = (*response)(nil)
+var _ IResponse = (*response)(nil)
 
-func NewResponse() IResponser {
+func NewResponse() IResponse {
 	return &response{}
 }
 
@@ -55,8 +55,8 @@ func (l *GinEngine) newDefaultHandler(controller any, t reflect.Method, req refl
 		}
 
 		// Validate
-		if validater, ok := reqVal.Interface().(IValidater); ok {
-			if err := validater.Validate(); err != nil {
+		if validate, ok := reqVal.Interface().(IValidator); ok {
+			if err := validate.Validate(); err != nil {
 				Logger().Info("Validate req err", zap.Error(err))
 				l.defaultResponse.Response(ctx, nil, err)
 				return

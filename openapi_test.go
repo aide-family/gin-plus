@@ -23,9 +23,9 @@ type (
 	}
 
 	ApiListReq struct {
-		Current   int    `form:"current"`
-		Size      int    `form:"size"`
-		Keryworld string `form:"keyworld"`
+		Current int    `form:"current"`
+		Size    int    `form:"size"`
+		Keyword string `form:"keyword"`
 	}
 	ApiListResp struct {
 		Total int64          `json:"total"`
@@ -62,7 +62,7 @@ type (
 	}
 )
 
-func (l *Api) GetDetail(ctx context.Context, req *ApiDetailReq) (*ApiDetailResp, error) {
+func (l *Api) GetDetail(_ context.Context, req *ApiDetailReq) (*ApiDetailResp, error) {
 	log.Println("Api.GetDetail")
 	return &ApiDetailResp{
 		Id:     req.Id,
@@ -71,7 +71,7 @@ func (l *Api) GetDetail(ctx context.Context, req *ApiDetailReq) (*ApiDetailResp,
 	}, nil
 }
 
-func (l *Api) GetList(ctx context.Context, req *ApiListReq) (*ApiListResp, error) {
+func (l *Api) GetList(_ context.Context, _ *ApiListReq) (*ApiListResp, error) {
 	log.Println("Api.GetList")
 	return &ApiListResp{
 		Total: 100,
@@ -85,12 +85,12 @@ func (l *Api) GetList(ctx context.Context, req *ApiListReq) (*ApiListResp, error
 	}, nil
 }
 
-func (l *Api) UpdateInfo(ctx context.Context, req *ApiUpdateReq) (*ApiUpdateResp, error) {
+func (l *Api) UpdateInfo(_ context.Context, req *ApiUpdateReq) (*ApiUpdateResp, error) {
 	log.Println("Api.UpdateInfo")
 	return &ApiUpdateResp{Id: req.Id}, nil
 }
 
-func (l *Api) DeleteInfo(ctx context.Context, req *DelApiReq) (*DelApiResp, error) {
+func (l *Api) DeleteInfo(_ context.Context, req *DelApiReq) (*DelApiResp, error) {
 	log.Println("Api.DeleteInfo")
 	return &DelApiResp{Id: req.Id}, nil
 }

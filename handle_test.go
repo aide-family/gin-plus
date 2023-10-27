@@ -84,7 +84,7 @@ func TestApiHandleFunc(t *testing.T) {
 	ginR.Use(
 		midd.Tracing("http://localhost:14268/api/traces"),
 		midd.Logger(),
-		midd.IpLimit(100, 5, "iplimit"),
+		midd.IpLimit(100, 5),
 		midd.Interceptor(),
 		midd.Cors(),
 	)
