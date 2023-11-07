@@ -216,12 +216,7 @@ func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller any)
 	if isStruct(tmp) {
 		// 递归获取内部的controller
 		for i := 0; i < tmp.NumField(); i++ {
-			// 判断field值是否为nil
-			if isNil(reflect.ValueOf(controller).Elem().Field(i).Interface()) {
-				continue
-			}
 			field := tmp.Field(i)
-
 			for field.Type.Kind() == reflect.Ptr {
 				field.Type = field.Type.Elem()
 			}
@@ -234,6 +229,11 @@ func (l *GinEngine) genStructRoute(parentGroup *gin.RouterGroup, controller any)
 			}
 
 			newController := reflect.ValueOf(controller).Elem().Field(i).Interface()
+			// 判断field值是否为nil
+			if isNil(newController) {
+				continue
+			}
+
 			l.genRoute(parentGroup, newController, field.Anonymous)
 		}
 	}
